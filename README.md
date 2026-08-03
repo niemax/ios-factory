@@ -24,7 +24,7 @@ The wider "app factory" vision (design system generator, screen generators, ASO 
   - [#1 — Parameterized release pipeline: tag push on Roompiece reaches TestFlight](https://github.com/niemax/ios-factory/issues/1) — **in progress**
   - [#2 — setup-ios-cicd skill scaffolds any app repo onto the pipeline](https://github.com/niemax/ios-factory/issues/2) (blocked by #1)
 - `fastlane/Fastfile` — the `release` lane: XcodeGen detection, `scan` on iPhone 17 (hard gate), API-key automatic signing via `gym`, tag/run-number version injection, `pilot` upload to TestFlight. Parameterized (`project_dir`/`scheme`/`bundle_id`/`team_id`/`marketing_version`/`build_number`) — no app-specific values in this repo.
-- `Gemfile` + `Gemfile.lock` — `fastlane` pinned to `~> 2.226` (locked at 2.230.0)
+- `Gemfile` — `fastlane` pinned to `~> 2.226`. No committed `Gemfile.lock`: this machine's local Ruby (2.6, ancient system Ruby) resolved transitive deps incompatible with CI's Ruby 3.3 (confirmed via two real failed runs — a Bundler version calling a removed Ruby method, then a platform mismatch, then a wrong CFPropertyList version). CI resolves fresh each run instead, bounded by the `~>` constraint; `ruby/setup-ruby`'s `bundler-cache: true` still caches it per-run via the `Gemfile` hash.
 - `.github/workflows/ios-release.yml` — the reusable `workflow_call` workflow. Checks out the calling app repo plus this repo, runs Ruby/Bundler, derives version from the pushed tag + `github.run_number`, runs the release lane.
 - `roompiece/roompiece`'s thin caller (`.github/workflows/release.yml`) — triggers on `v*.*.*` tags, calls this workflow with Roompiece's `project_dir: client`, `scheme: Roompiece`, `bundle_id: com.niemax.roompiece`, `team_id: T854JP4YAB`, `secrets: inherit`.
 
