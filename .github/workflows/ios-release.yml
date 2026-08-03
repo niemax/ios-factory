@@ -88,8 +88,13 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
         run: |
+          # Two levels: fastlane itself chdirs into ios-factory-tools/fastlane/
+          # before running the lane, on top of this step's own working-directory
+          # (ios-factory-tools/) — so reaching the app repo's checkout needs
+          # ../.. (out of fastlane/, out of ios-factory-tools/), then the app's
+          # project_dir from there.
           bundle exec fastlane ios release \
-            project_dir:"../${{ inputs.project_dir }}" \
+            project_dir:"../../${{ inputs.project_dir }}" \
             scheme:"${{ inputs.scheme }}" \
             bundle_id:"${{ inputs.bundle_id }}" \
             team_id:"${{ inputs.team_id }}" \
