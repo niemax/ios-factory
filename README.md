@@ -19,14 +19,38 @@ The wider "app factory" vision (design system generator, screen generators, ASO 
 - Repo created (private, `main` default branch)
 - `AGENTS.md` + `docs/agents/{issue-tracker,triage-labels,domain}.md` scaffolded — GitHub tracker (this repo), default triage labels, single-context domain docs
 - Implementation broken into 2 tracer-bullet tickets, published to this repo's tracker:
-  - [#1 — Parameterized release pipeline: tag push on Roompiece reaches TestFlight](https://github.com/niemax/ios-factory/issues/1) (unblocked, not yet started)
+  - [#1 — Parameterized release pipeline: tag push on Roompiece reaches TestFlight](https://github.com/niemax/ios-factory/issues/1) — **in progress**
   - [#2 — setup-ios-cicd skill scaffolds any app repo onto the pipeline](https://github.com/niemax/ios-factory/issues/2) (blocked by #1)
+- `fastlane/Fastfile` — the `release` lane: XcodeGen detection, `scan` on iPhone 17 (hard gate), API-key automatic signing via `gym`, tag/run-number version injection, `pilot` upload to TestFlight. Parameterized (`project_dir`/`scheme`/`bundle_id`/`team_id`/`marketing_version`/`build_number`) — no app-specific values in this repo.
+- `Gemfile` + `Gemfile.lock` — `fastlane` pinned to `~> 2.226` (locked at 2.230.0)
+- `.github/workflows/ios-release.yml` — the reusable `workflow_call` workflow. Checks out the calling app repo plus this repo, runs Ruby/Bundler, derives version from the pushed tag + `github.run_number`, runs the release lane.
+- `roompiece/roompiece`'s thin caller (`.github/workflows/release.yml`) — triggers on `v*.*.*` tags, calls this workflow with Roompiece's `project_dir: client`, `scheme: Roompiece`, `bundle_id: com.niemax.roompiece`, `team_id: T854JP4YAB`, `secrets: inherit`.
 
 **Not done yet:**
-- No `fastlane/Fastfile`, no `.github/workflows/ios-release.yml` — the actual pipeline doesn't exist as code yet
-- No `setup-ios-cicd` skill
-- Roompiece has no thin caller workflow pointing at this repo yet
-- No real tag has been pushed through any of this — nothing has been proven end-to-end
+- `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_CONTENT` are not yet set as secrets on `roompiece/roompiece` — the pipeline cannot sign or upload until they are (values never handled by an agent — see "Setting secrets" below)
+- No real tag has been pushed through any of this — nothing has been proven end-to-end yet; that's Ticket 1's acceptance test
+- No `setup-ios-cicd` skill (Ticket 2, blocked on Ticket 1 landing green)
+
+## Reusable workflow contract (`ios-release.yml`)
+
+**Inputs** (`with:` in the caller):
+- `project_dir` — directory containing `project.yml` / the `.xcodeproj`, relative to the calling repo's root (`"."` if at the root)
+- `scheme` — Xcode scheme to test and build
+- `bundle_id` — app's bundle identifier
+- `team_id` — Apple Developer Team ID
+
+**Secrets** (`secrets: inherit` from the caller, or pass explicitly):
+- `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_CONTENT` — App Store Connect API key (Key ID, Issuer ID, raw `.p8` contents). Same key used for signing (`-allowProvisioningUpdates`) and the TestFlight upload.
+
+## Setting secrets on a consuming app repo
+
+Never paste key material into an agent session. Run these yourself:
+
+```
+gh secret set ASC_KEY_ID --repo <owner>/<repo> --body "<key id>"
+gh secret set ASC_ISSUER_ID --repo <owner>/<repo> --body "<issuer id>"
+gh secret set ASC_KEY_CONTENT --repo <owner>/<repo> < ~/path/to/AuthKey_XXXXXX.p8
+```
 
 ## Key decisions already locked (see the map for full reasoning)
 
