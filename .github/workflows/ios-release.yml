@@ -10,7 +10,13 @@ name: iOS release (reusable)
 #         scheme: Roompiece
 #         bundle_id: com.example.roompiece
 #         team_id: ABCDE12345
-#       secrets: inherit
+#       secrets:
+#         ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+#         ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+#         ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+#
+# `secrets: inherit` looks tempting but is unreliable across repository
+# boundaries (community-reported gotcha) — pass each secret explicitly.
 #
 # Stops at a successful TestFlight upload. Submitting the build for App
 # Review is always a manual step in App Store Connect — never automated.

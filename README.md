@@ -1,6 +1,8 @@
 # ios-factory
 
-A shared, private repo for reusable iOS release tooling. Roompiece is the first consumer; more apps are expected to onboard onto the same pipeline over time. This README is a living status doc — kept current as tickets close, so an agent picking this repo up cold (or the human) doesn't have to reconstruct history from the issue tracker.
+A shared, **public** repo for reusable iOS release tooling. Roompiece is the first consumer; more apps are expected to onboard onto the same pipeline over time. This README is a living status doc — kept current as tickets close, so an agent picking this repo up cold (or the human) doesn't have to reconstruct history from the issue tracker.
+
+**Visibility note:** started private, switched to public during Ticket 1's real acceptance run — GitHub only allows a private repo's reusable workflows to be called from repos under the *same* owner/org, and `roompiece/roompiece` is a different owner than `niemax`. No secrets or business logic live here (those stay in each consuming app repo), so the exposure from going public is low; it also better serves reuse across apps that may live under yet other owners in the future.
 
 ## What this repo is for right now
 
@@ -16,7 +18,7 @@ The wider "app factory" vision (design system generator, screen generators, ASO 
 ## Current status
 
 **Done:**
-- Repo created (private, `main` default branch)
+- Repo created (public since Ticket 1's acceptance run — see Visibility note above; `main` default branch)
 - `AGENTS.md` + `docs/agents/{issue-tracker,triage-labels,domain}.md` scaffolded — GitHub tracker (this repo), default triage labels, single-context domain docs
 - Implementation broken into 2 tracer-bullet tickets, published to this repo's tracker:
   - [#1 — Parameterized release pipeline: tag push on Roompiece reaches TestFlight](https://github.com/niemax/ios-factory/issues/1) — **in progress**
@@ -39,7 +41,13 @@ The wider "app factory" vision (design system generator, screen generators, ASO 
 - `bundle_id` — app's bundle identifier
 - `team_id` — Apple Developer Team ID
 
-**Secrets** (`secrets: inherit` from the caller, or pass explicitly):
+**Secrets** (pass explicitly in the caller — `secrets: inherit` is unreliable across repository boundaries, confirmed by a real failed run: `ASC_KEY_ID`/`ASC_ISSUER_ID`/`ASC_KEY_CONTENT` existed on the caller repo but weren't seen by the called workflow):
+```yaml
+secrets:
+  ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+  ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+  ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+```
 - `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_CONTENT` — App Store Connect API key (Key ID, Issuer ID, raw `.p8` contents). Same key used for signing (`-allowProvisioningUpdates`) and the TestFlight upload.
 
 ## Setting secrets on a consuming app repo
