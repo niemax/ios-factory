@@ -18,20 +18,23 @@ The wider "app factory" vision (design system generator, screen generators, ASO 
 ## Current status
 
 **Done:**
-- Repo created (public since Ticket 1's acceptance run — see Visibility note above; `main` default branch)
+- Repo created, public (see Visibility note above), `main` default branch
 - `AGENTS.md` + `docs/agents/{issue-tracker,triage-labels,domain}.md` scaffolded — GitHub tracker (this repo), default triage labels, single-context domain docs
-- Implementation broken into 2 tracer-bullet tickets, published to this repo's tracker:
-  - [#1 — Parameterized release pipeline: tag push on Roompiece reaches TestFlight](https://github.com/niemax/ios-factory/issues/1) — **in progress**
-  - [#2 — setup-ios-cicd skill scaffolds any app repo onto the pipeline](https://github.com/niemax/ios-factory/issues/2) (blocked by #1)
+- **[#1 — Parameterized release pipeline](https://github.com/niemax/ios-factory/issues/1) — closed, mechanically proven.** Real `v0.0.1-test` tag pushes against `roompiece/roompiece` surfaced and fixed 5 real bugs: cross-owner private-repo workflow access (→ made this repo public), `secrets: inherit` unreliable cross-repo (→ explicit secret passing), a `Gemfile.lock` locked to an ancient local toolchain (→ dropped from version control), a `project_dir` path-depth bug (→ fixed, then hardened via `File.expand_path`), and `xcodegen` missing on the runner (→ install step added). Proven through a real 205-test XCTest run on the iPhone 17 simulator, correctly hard-blocking on one genuine (pre-existing, unrelated) failing test. `gym`/`pilot` on a clean run weren't directly observed — accepted as sufficient since the test-gate plumbing (the part that actually had bugs) is now proven.
+- `ASC_KEY_ID`/`ASC_ISSUER_ID`/`ASC_KEY_CONTENT` **are set** on `roompiece/roompiece` (set by the human directly, never handled by an agent)
+- Amendment (v2) decided and speced: merge-to-`production` replaces the manual tag, version/changelog inferred from Conventional Commits, App Review submission becomes a default-off toggle. Two new tickets:
+  - [#3 — Commit message enforcement (Conventional Commits CI check)](https://github.com/niemax/ios-factory/issues/3) — unblocked
+  - [#4 — Merge-triggered release, inferred version, generated changelog, auto-submit toggle](https://github.com/niemax/ios-factory/issues/4) — blocked by #1 (now satisfied) and #3
 - `fastlane/Fastfile` — the `release` lane: XcodeGen detection, `scan` on iPhone 17 (hard gate), API-key automatic signing via `gym`, tag/run-number version injection, `pilot` upload to TestFlight. Parameterized (`project_dir`/`scheme`/`bundle_id`/`team_id`/`marketing_version`/`build_number`) — no app-specific values in this repo.
-- `Gemfile` — `fastlane` pinned to `~> 2.226`. No committed `Gemfile.lock`: this machine's local Ruby (2.6, ancient system Ruby) resolved transitive deps incompatible with CI's Ruby 3.3 (confirmed via two real failed runs — a Bundler version calling a removed Ruby method, then a platform mismatch, then a wrong CFPropertyList version). CI resolves fresh each run instead, bounded by the `~>` constraint; `ruby/setup-ruby`'s `bundler-cache: true` still caches it per-run via the `Gemfile` hash.
-- `.github/workflows/ios-release.yml` — the reusable `workflow_call` workflow. Checks out the calling app repo plus this repo, runs Ruby/Bundler, derives version from the pushed tag + `github.run_number`, runs the release lane.
-- `roompiece/roompiece`'s thin caller (`.github/workflows/release.yml`) — triggers on `v*.*.*` tags, calls this workflow with Roompiece's `project_dir: client`, `scheme: Roompiece`, `bundle_id: com.niemax.roompiece`, `team_id: T854JP4YAB`, `secrets: inherit`.
+- `Gemfile` — `fastlane` pinned to `~> 2.226`, no committed lockfile (see #1's resolution above for why).
+- `.github/workflows/ios-release.yml` — the reusable `workflow_call` workflow, proven end-to-end through the test gate.
+- `roompiece/roompiece`'s thin caller (`.github/workflows/release.yml`) — currently tag-triggered; will be updated to merge-triggered by #4.
 
 **Not done yet:**
-- `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_CONTENT` are not yet set as secrets on `roompiece/roompiece` — the pipeline cannot sign or upload until they are (values never handled by an agent — see "Setting secrets" below)
-- No real tag has been pushed through any of this — nothing has been proven end-to-end yet; that's Ticket 1's acceptance test
-- No `setup-ios-cicd` skill (Ticket 2, blocked on Ticket 1 landing green)
+- `setup-ios-cicd` skill (#2, now unblocked)
+- Commit message enforcement (#3)
+- Merge-triggered release + inferred version/changelog + auto-submit toggle (#4)
+- A fully clean run through `gym`/`pilot` (deferred, see #1's resolution)
 
 ## Reusable workflow contract (`ios-release.yml`)
 
@@ -66,5 +69,5 @@ gh secret set ASC_KEY_CONTENT --repo <owner>/<repo> < ~/path/to/AuthKey_XXXXXX.p
 - Secrets vs config: `setup-ios-cicd` prints `gh secret set` commands for credentials (never handles the values itself); non-sensitive config (`bundle_id`/`scheme`/`team_id`) goes straight into the consuming repo's thin workflow file as `with:` inputs — no separate config file.
 - Test gate: `fastlane scan` on the iPhone 17 simulator, hard-blocking.
 - Version/build number: overridden at build time via `gym xcargs` (`MARKETING_VERSION` from the tag) and `github.run_number` (build number) — no repo edits, no commits back.
-- Trigger/endpoint: `vX.Y.Z` tag push triggers the pipeline; it stops at TestFlight. App Review submission is always a manual step.
+- Trigger/endpoint: ~~`vX.Y.Z` tag push triggers the pipeline; it stops at TestFlight. App Review submission is always a manual step.~~ **Superseded (Amendment v2, spec #94):** merge-to-`production` triggers the pipeline (no tag); App Review submission is a default-off `auto_submit_review` toggle, not hardcoded-always-manual. See #4.
 - Reuse mechanism: the Fastlane release lane lives only in this repo, parameterized — no per-app `Fastfile`.
