@@ -75,6 +75,9 @@ jobs:
           bundler-cache: true
           working-directory: ios-factory-tools
 
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
       - name: Derive version from tag and run number
         id: version
         run: |
