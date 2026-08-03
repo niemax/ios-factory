@@ -26,7 +26,11 @@ platform :ios do
       ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_CONTENT (raw .p8 contents)
   DESC
   lane :release do |options|
-    project_dir = options.fetch(:project_dir)
+    # Resolve to absolute once, up front — different fastlane actions
+    # (scan/gym vs. plain Dir/File calls) don't all re-resolve a relative
+    # path against the same cwd, confirmed by a real run where the same
+    # relative string worked for XcodeGen but not for scan's :project.
+    project_dir = File.expand_path(options.fetch(:project_dir))
     scheme = options.fetch(:scheme)
     bundle_id = options.fetch(:bundle_id)
     team_id = options.fetch(:team_id)
