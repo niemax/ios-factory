@@ -28,8 +28,7 @@ The wider "app factory" vision (design system generator, screen generators, Fire
 - [#6](https://github.com/niemax/ios-factory/issues/6) — existing ASC API key has App Manager role, sufficient for metadata/screenshot work
 - `ASC_KEY_ID`/`ASC_ISSUER_ID`/`ASC_KEY_CONTENT` are set on `roompiece/roompiece` (by the human, never handled by an agent)
 
-**In progress:**
-- [#3 — Commit lint](https://github.com/niemax/ios-factory/issues/3): reusable workflow + check script written. Remaining: wire the caller into `roompiece/roompiece` and require it via branch protection.
+- [#3 — Commit lint](https://github.com/niemax/ios-factory/issues/3): reusable workflow + check script, wired into `roompiece/roompiece` via `pr-checks.yml` (roompiece#129). **Advisory, not required:** branch protection/rulesets need GitHub Pro/Team on a private repo, and the org is on Free. Don't merge red PRs.
 
 **Not done yet:**
 - #15 open questions: how ios-factory learns Xcode Cloud's build finished processing (poll ASC API vs. webhook → `repository_dispatch`)
@@ -51,7 +50,7 @@ jobs:
     uses: niemax/ios-factory/.github/workflows/commit-lint.yml@main
 ```
 
-Then require the `commit-lint / Conventional Commits` status check in the app repo's branch protection for its merge target.
+If the app repo's plan allows it (public repo, or Pro/Team), require the `commit-lint / Conventional Commits` status check in branch protection for its merge target. Otherwise it's advisory.
 
 Check script self-test: `scripts/test-check-commits.sh`.
 
