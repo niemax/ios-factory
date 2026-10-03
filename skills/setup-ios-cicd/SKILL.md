@@ -1,6 +1,6 @@
 ---
 name: setup-ios-cicd
-description: Onboards an iOS app repo onto niemax/ios-factory. Writes the shared PR checks caller (commit-lint + swift-lint) and a project-tailored AGENTS.md from a generic template, filling in architecture, the load-bearing decision and invariants by exploring the repo. Use when setting up a new or existing iOS app repo, adding ios-factory's PR checks, or creating/refreshing an iOS project's AGENTS.md.
+description: Onboards an iOS app repo onto niemax/ios-factory. Writes the shared PR checks caller (commit-lint + swift-lint), sets up App Store Connect (bundle ID, internal TestFlight group, testers) and writes a project-tailored AGENTS.md from a generic template, filling in architecture, the load-bearing decision and invariants by exploring the repo. Use when setting up a new or existing iOS app repo, adding ios-factory's PR checks, or creating/refreshing an iOS project's AGENTS.md.
 ---
 
 # setup-ios-cicd
@@ -47,7 +47,20 @@ jobs:
 
 3. Show the full diff. Commit only after the user agrees, on a branch, with a Conventional Commit message (e.g. `docs: add AGENTS.md and shared PR checks`). Opening the PR is the user's call.
 
-## 4. Done: tell the user
+## 4. App Store Connect
+
+Runs `scripts/asc-setup.swift` from the ios-factory checkout (this skill's folder is `<ios-factory>/skills/setup-ios-cicd`, so the script is `../../scripts/asc-setup.swift` from here). It's idempotent: re-running only fills gaps.
+
+1. Ask for the App Store Connect key: Key ID, Issuer ID, and the **path** to the `.p8` file. Never open, print or copy the key file. Only pass the path in `ASC_KEY_PATH`.
+2. Confirm the app name, the internal TestFlight group name (default `Internal Testers`) and tester emails. Testers must already be users on the team.
+3. Run with `--dry-run` first and show the output:
+   ```bash
+   ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=… swift <ios-factory>/scripts/asc-setup.swift \
+     --bundle-id <id> --name "<App>" --group "Internal Testers" --tester a@b.com --dry-run
+   ```
+4. After the user agrees, run it again without `--dry-run`. Exit code 2 means the app record doesn't exist: the API can't create apps, so relay the printed web-form values, wait for the user to create it, then re-run.
+
+## 5. Done: tell the user
 
 - Run `xcrun agent skills export --output-dir ~/.claude/skills` (Apple's Xcode skills; re-run after Xcode updates).
 - Both checks are advisory unless the repo's plan allows branch protection (public repo or GitHub Pro/Team). If it does, require `commit-lint / Conventional Commits` and `swift-lint / Apple SwiftUI guidance`.
