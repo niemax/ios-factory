@@ -162,9 +162,17 @@ do {
 
     // 3. Internal group with access to all builds
     let groups = items(try await api("GET", "/v1/apps/\(appID)/betaGroups", query: ["limit": "200"]))
-    var groupID = groups.first(where: { attribute($0, "name") as? String == groupName })?["id"] as? String
+    for group in groups {
+        let kind = attribute(group, "isInternalGroup") as? Bool == true ? "internal" : "external"
+        let allBuilds = attribute(group, "hasAccessToAllBuilds") as? Bool == true ? ", all builds" : ""
+        print("  · existing group \"\(attribute(group, "name") as? String ?? "?")\" (\(kind)\(allBuilds))")
+    }
+    // An internal group that already gets every build does the job, whatever it's called.
+    let existing = groups.first(where: { attribute($0, "name") as? String == groupName })
+        ?? groups.first(where: { attribute($0, "isInternalGroup") as? Bool == true && attribute($0, "hasAccessToAllBuilds") as? Bool == true })
+    var groupID = existing?["id"] as? String
     if let groupID {
-        print("✓ TestFlight group \"\(groupName)\" exists (\(groupID))")
+        print("✓ using TestFlight group \"\(attribute(existing!, "name") as? String ?? groupName)\" (\(groupID))")
     } else if dryRun {
         print("→ would create internal TestFlight group \"\(groupName)\" with access to all builds")
     } else {
