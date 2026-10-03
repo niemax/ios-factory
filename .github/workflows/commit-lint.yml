@@ -1,0 +1,47 @@
+name: Commit lint (reusable)
+
+# Called by a consuming app repo's own PR workflow, e.g.:
+#
+#   on:
+#     pull_request:
+#   jobs:
+#     commit-lint:
+#       uses: niemax/ios-factory/.github/workflows/commit-lint.yml@main
+#
+# Checks every non-merge commit in the PR (not just the title or head
+# commit) — merges into `production` keep every individual commit, and
+# version/changelog inference (#4) reads them all. Merge commits are
+# skipped: they're git-generated ("Merge branch 'main' into ...").
+# Runs on ubuntu-latest — no macOS minutes.
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  commit-lint:
+    name: Conventional Commits
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out app repo (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check out ios-factory (check script lives here)
+        uses: actions/checkout@v4
+        with:
+          repository: niemax/ios-factory
+          path: ios-factory-tools
+
+      - name: Check every commit in the PR
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ -z "$BASE" ] || [ -z "$HEAD" ]; then
+            echo "commit-lint must be called from a pull_request workflow"; exit 1
+          fi
+          git log --no-merges --format=%s "$BASE..$HEAD" | ios-factory-tools/scripts/check-commits.sh
