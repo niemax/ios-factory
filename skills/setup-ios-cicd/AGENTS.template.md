@@ -120,9 +120,10 @@ Every commit must follow Conventional Commits: `<type>[(scope)][!]: <description
 
 ## Release
 
-**A merge to `production` is the release. `main` is integration only.** Anything that submits to Apple runs only on a merge to `production`: the TestFlight upload, release notes, App Store metadata and submit-for-review. Never wire one of those to `main`.
+- **Merge to `main`** → Xcode Cloud archives and uploads an **internal** TestFlight build.
+- **Merge to `production`** → the App Store release: version bump, release notes / What's New, App Store metadata and submit-for-review. Never wire any of those to `main`.
 
-Xcode Cloud builds, tests, signs, and uploads to TestFlight (configured in App Store Connect, not in this repo; its archive/upload workflow starts on `production`). Release metadata tooling lives in `niemax/ios-factory`.
+Xcode Cloud is configured in App Store Connect, not in this repo. Release metadata tooling lives in `niemax/ios-factory`.
 
 <!-- tailor: keep the repo's existing "Agent skills" / issue-tracker /
 CodeGraph sections verbatim if present -->
