@@ -1,0 +1,50 @@
+name: Swift lint (reusable)
+
+# Called by a consuming app repo's own PR workflow, e.g.:
+#
+#   on:
+#     pull_request:
+#   jobs:
+#     swift-lint:
+#       uses: niemax/ios-factory/.github/workflows/swift-lint.yml@main
+#
+# Flags soft-deprecated SwiftUI APIs and discouraged patterns (rules from
+# Apple's Xcode 27 agent skills; see scripts/check-swift.sh) on lines the PR
+# adds. Legacy code is only flagged once someone touches it.
+# Runs on ubuntu-latest — no macOS minutes.
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  swift-lint:
+    name: Apple SwiftUI guidance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out app repo (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check out ios-factory (check script lives here)
+        uses: actions/checkout@v4
+        with:
+          repository: niemax/ios-factory
+          path: ios-factory-tools
+
+      - name: Check added Swift lines
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ -z "$BASE" ] || [ -z "$HEAD" ]; then
+            echo "swift-lint must be called from a pull_request workflow"; exit 1
+          fi
+          # Findings become inline PR annotations; pipefail (Actions' bash
+          # default) keeps the script's exit code.
+          git diff -U0 "$BASE...$HEAD" -- '*.swift' \
+            | ios-factory-tools/scripts/check-swift.sh \
+            | sed -E 's/^([^:]+):([0-9]+): (.*)$/::error file=\1,line=\2::\3/'

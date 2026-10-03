@@ -54,6 +54,17 @@ If the app repo's plan allows it (public repo, or Pro/Team), require the `commit
 
 Check script self-test: `scripts/test-check-commits.sh`.
 
+## Swift lint (`swift-lint.yml`)
+
+Flags discouraged Swift/SwiftUI APIs on **lines a PR adds**, so legacy code is only flagged once touched. Rules come from Apple's Xcode 27 agent skills (`swiftui-specialist`: soft-deprecated APIs, `ObservableObject` → `@Observable`, `AnyView`, index-based `ForEach` identity), plus the shared concurrency rule (no `MainActor.run` / `DispatchQueue.main`). Soft-deprecated APIs compile without warnings, so nothing else catches them. Findings show as inline PR annotations. For a deliberate exception, put `// swift-lint:allow` on the line.
+
+```yaml
+  swift-lint:
+    uses: niemax/ios-factory/.github/workflows/swift-lint.yml@main
+```
+
+The rule list lives in `scripts/check-swift.sh`. Refresh it from `xcrun agent skills export --output-dir <dir>` → `swiftui-specialist/references/soft-deprecated-apis.md` after each Xcode release. Self-test: `scripts/test-check-swift.sh`.
+
 ## Setting secrets on a consuming app repo
 
 Needed for the App Store Connect API work (#4/#5). Never paste key material into an agent session. Run these yourself:
