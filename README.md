@@ -90,4 +90,5 @@ gh secret set ASC_KEY_CONTENT --repo <owner>/<repo> < ~/path/to/AuthKey_XXXXXX.p
 - **No paid CI minutes.** Binary path = Xcode Cloud (free tier). ios-factory workflows run on Linux only (#15).
 - Secrets vs config: credentials via `gh secret set` run by the human; non-sensitive config inline as `with:` inputs in the consuming repo's thin workflow file — no separate config file.
 - Merge-to-`production` is the release moment; version/changelog inferred from Conventional Commits; App Review submission is a default-off toggle (spec #94 Amendment v2, #4).
+- **Anything submission-related triggers only on a merge to `production`, never `main`.** That covers the TestFlight upload, the changelog/"What to Test" write, App Store metadata/screenshots (#5) and submit-for-review. `main` is integration only. PR checks (commit-lint, swift-lint) run on every PR, since they submit nothing. Xcode Cloud's archive/upload workflow must use a `production` branch start condition too.
 - Reuse mechanism: logic lives only in this repo as reusable workflows + scripts; consuming repos hold thin callers.
