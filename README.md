@@ -65,6 +65,16 @@ Flags discouraged Swift/SwiftUI APIs on **lines a PR adds**, so legacy code is o
 
 The rule list lives in `scripts/check-swift.sh`. Refresh it from `xcrun agent skills export --output-dir <dir>` → `swiftui-specialist/references/soft-deprecated-apis.md` after each Xcode release. Self-test: `scripts/test-check-swift.sh`.
 
+## `setup-ios-cicd` skill
+
+`skills/setup-ios-cicd/` onboards an app repo: it writes `pr-checks.yml` (commit-lint + swift-lint) and a project-tailored `AGENTS.md` from `AGENTS.template.md`. The template holds only the generic basics (conventions, Apple guidance, concurrency, commits, release). The skill fills in architecture, the load-bearing decision and invariants by exploring the app repo and confirming with you, so domain knowledge never lands in this public repo.
+
+Install once:
+
+```bash
+ln -s ~/Desktop/Code/ios-factory/skills/setup-ios-cicd ~/.claude/skills/setup-ios-cicd
+```
+
 ## Setting secrets on a consuming app repo
 
 Needed for the App Store Connect API work (#4/#5). Never paste key material into an agent session. Run these yourself:
