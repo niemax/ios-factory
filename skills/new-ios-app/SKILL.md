@@ -85,6 +85,10 @@ What the template gives you (the same shape as truster's NotificationApp):
 - Show the tree and the diff summary. On a yes, commit on `main`: `chore: scaffold <AppName>`.
 - Remote: ask which owner (personal or an org). Then `gh repo create <owner>/<kebab-name> --private --source . --push`.
 
-## 5. Hand off
+## 5. Hand off: continue straight into setup-ios-cicd
 
-Run `/ios-factory:setup-ios-cicd` in the new repo. It writes `AGENTS.md` and the PR checks, creates the App Store Connect app (`produce` needs an Apple ID and a 2FA prompt, which the user runs), and guides the two Xcode Cloud workflows. Create the `production` branch from `main` once it's pushed.
+Don't stop here, and don't ask the user to type a command.
+1. Create `production` from `main` and push it: `git push origin main:production`.
+2. Invoke the `ios-factory:setup-ios-cicd` skill (Skill tool) with the new repo as the target, and follow it. It writes `AGENTS.md` and the PR checks, creates the App Store Connect app (`produce`: the user runs that one command for the Apple ID and 2FA), the internal TestFlight group, and guides the two Xcode Cloud workflows.
+   - Its explore step finds a fresh scaffold: no ADRs or invariants yet. The load-bearing decision comes from the one-liner, and the invariants section stays empty. Don't invent rules.
+3. Finish with a short checklist of what's live and what's left (Sign in with Apple toggle, app icon, Xcode Cloud).
