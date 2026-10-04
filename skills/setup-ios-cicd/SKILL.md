@@ -1,6 +1,6 @@
 ---
 name: setup-ios-cicd
-description: Onboards an iOS app repo onto niemax/ios-factory. Writes the shared PR checks caller (commit-lint + swift-lint), sets up App Store Connect (bundle ID, app record, internal TestFlight group, testers) and Xcode Cloud workflows (main → internal TestFlight, production → App Store) and writes a project-tailored AGENTS.md from a generic template, filling in architecture, the load-bearing decision and invariants by exploring the repo. Use when setting up a new or existing iOS app repo, adding ios-factory's PR checks, or creating/refreshing an iOS project's AGENTS.md.
+description: Onboards an iOS app repo onto niemax/ios-factory. Writes the shared PR checks caller (commit-lint + swift-lint), sets up App Store Connect (bundle ID, app record, internal TestFlight group, testers) and writes a project-tailored AGENTS.md from a generic template, filling in architecture, the load-bearing decision and invariants by exploring the repo. Use when setting up a new or existing iOS app repo, adding ios-factory's PR checks, or creating/refreshing an iOS project's AGENTS.md.
 ---
 
 # setup-ios-cicd
@@ -62,20 +62,13 @@ Uses the `setup` lane in `<ios-factory>/fastlane/Fastfile` (this skill's folder 
    - **App already exists:** runs non-interactively with the API key, so run it yourself.
    - **New app:** `produce` creates the bundle ID and app record, which needs an Apple ID login with a password and 2FA prompt. Hand the user the exact command to run with `! FASTLANE_USER=<apple id> …`, then re-run the lane yourself to confirm.
 
-## 5. Xcode Cloud workflows
+## 5. Xcode Cloud workflows (manual, guide the user)
 
-`fastlane ios xcode_cloud` (same key env vars) makes sure there are two workflows:
-- `main`: archive, then upload as an internal TestFlight build;
-- `production`: archive, then upload as App Store eligible.
+Apple's API can't connect an app and repo to Xcode Cloud, so the user does it in Xcode: Product → Xcode Cloud → Create Workflow, granting repo access. Walk them through two workflows:
+- **TestFlight Internal**: start condition is branch changes on `main` (exact match, auto-cancel on). Action: Archive (iOS, scheme `<Scheme>`), distribution **TestFlight (Internal Testing Only)**.
+- **Production**: start condition is branch changes on `production`. Action: Archive, distribution **TestFlight and App Store**.
 
-It leaves alone any branch that already has a workflow starting on it.
-
-1. **Prerequisite, with no API for it:** the app must be connected to Xcode Cloud once in Xcode (Product → Xcode Cloud → Create Workflow, granting repo access). If the lane says it isn't connected, walk the user through that, then re-run.
-2. Dry run, show the output, then run for real after the user agrees:
-   ```bash
-   fastlane ios xcode_cloud bundle_id:<id> scheme:<Scheme> container:<repo-relative .xcodeproj> dry_run:true
-   ```
-3. The workflow Xcode creates during that first connection usually starts on every branch. Mention it so the user can delete it in App Store Connect if it's not wanted.
+The internal group from step 4 has access to all builds, so no post-action is needed for testers. Delete the default workflow Xcode creates if it starts on every branch.
 
 ## 6. Done: tell the user
 

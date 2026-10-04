@@ -80,7 +80,6 @@ ln -s ~/Desktop/Code/ios-factory/skills/setup-ios-cicd ~/.claude/skills/setup-io
 `fastlane/Fastfile` holds App Store Connect tooling. **Builds stay on Xcode Cloud.** Fastlane never archives or uploads here. Install with `brew install fastlane`, run from this repo's root.
 
 - `fastlane ios setup bundle_id:… name:… [group:…] [testers:a@b.com,…] [dry_run:true]`: idempotent app setup. It creates the bundle ID and app record via `produce` (Apple ID login with 2FA, only when the app doesn't exist yet), then makes an internal TestFlight group with access to all builds (reusing an existing one), then adds testers. API key via `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_PATH`.
-- `fastlane ios xcode_cloud bundle_id:… scheme:… container:… [dry_run:true]`: idempotent Xcode Cloud workflows. `main` archives and uploads an internal TestFlight build; `production` archives and uploads an App Store eligible build. It leaves alone any branch that already has a workflow. Prerequisite: the app connected to Xcode Cloud once in Xcode (no API for that).
 - Release lanes for `production` (`deliver` / `pilot`: notes, metadata, screenshots, submit) come with #4/#5.
 
 ## Setting secrets on a consuming app repo
