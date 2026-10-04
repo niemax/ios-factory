@@ -1,0 +1,19 @@
+{
+  "name": "__KEBAB__-functions",
+  "description": "__DISPLAY_NAME__ backend: proxies LLM calls, provider keys stay server-side.",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "serve": "cd .. && firebase emulators:start --only functions,firestore",
+    "test": "node --test *.test.mjs",
+    "deploy": "cd .. && firebase deploy --only functions"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.1.0"
+  }
+}

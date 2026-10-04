@@ -22,10 +22,11 @@ Each check is silent when it passes.
 
 ## 1. Ask (one message)
 
-Three questions:
+Four questions:
 - App name: UpperCamelCase, used for the module, target and scheme. Add a display name if it's different.
 - One line of what the app is. It seeds `CONTEXT.md`.
 - **Firebase Auth and Firestore?** Default: both. If Auth, which sign-in methods: Sign in with Apple (default), Google, email/password, anonymous. App Store rule 4.8: offering Google means Sign in with Apple is offered too.
+- **LLMs from the cloud?** Default: no. If yes, which: OpenAI, Anthropic, Gemini (any subset). This adds `backend/`, a Cloud Functions proxy that keeps the API keys server-side (the same pattern as card-scanner and interior-ai), plus `Services/LLMService.swift`. It forces Auth on: the backend needs a signed-in uid, and anonymous sign-in covers users who haven't signed in.
 
 Everything else is derived. Show it in one line, which the user can override:
 - bundle ID `${user_config.bundle_id_prefix}.<lowercased name>`;
@@ -37,7 +38,7 @@ Never name the module after a framework type (`NotificationCenter`, `Color`, `Ap
 ## 2. Scaffold
 
 ```bash
-FIREBASE_AUTH=1|0 FIREBASE_FIRESTORE=1|0 \
+FIREBASE_AUTH=1|0 FIREBASE_FIRESTORE=1|0 [LLM_PROVIDERS=openai,anthropic,gemini] \
   "${CLAUDE_PLUGIN_ROOT}/skills/new-ios-app/scaffold.sh" <dest> <AppName> <bundle.id> "${user_config.team_id}" "<Display Name>"
 ```
 It copies [template/](template/), fills the placeholders, runs `xcodegen generate` and `git init`.
@@ -47,6 +48,7 @@ It copies [template/](template/), fills the placeholders, runs `xcodegen generat
 - `AGENTS.md`: fill `${CLAUDE_PLUGIN_ROOT}/skills/setup-ios-cicd/AGENTS.template.md` from what's already known, without exploring:
   - name, scheme and paths from step 1;
   - the stack from `project.yml` (SwiftUI, Swift 6, Observation, Swift Testing, XcodeGen with buildable folders, SwiftLint, Firebase plus the chosen products, PostHog);
+  - with LLMs: the backend line (Node 22 Cloud Functions in `backend/`, proxies the chosen providers, keys in Firebase secrets), its `npm test` under Build / test / run, and an invariant: **the app never calls an LLM provider directly; every call goes through `backend/`**;
   - iOS 26, iPhone, portrait;
   - the greenfield feature folder tree;
   - the load-bearing decision drafted from the one-liner (the user confirms or rewrites it);
@@ -67,13 +69,14 @@ What the template gives you (the same shape as truster's NotificationApp):
 
 **Firebase** (Firebase MCP):
 1. `firebase_list_projects`. Reuse one or `firebase_create_project`. Project IDs are global: propose `<kebab-name>-<short random>`.
+   Then `firebase_update_environment` with `project_dir` = the app repo and `active_project` = the project ID. Every later Firebase call depends on this.
 2. `firebase_create_app` (platform ios, the bundle ID). Reuse if it already exists (`firebase_list_apps`).
 3. `firebase_get_sdk_config` for that app. Write it to `<AppName>/GoogleService-Info.plist`; the buildable folder bundles it with no project edit. Commit it: it identifies the project and isn't a secret, and Xcode Cloud needs it in the repo.
 4. **Auth** (if chosen): `firebase_init` with `features.auth.providers`, from the app repo root. It covers Google, email/password and anonymous.
    - **Sign in with Apple** isn't in the MCP. The user enables it in the Firebase console → Authentication → Sign-in method → Apple, which needs only a toggle for native iOS. Give them the link: `https://console.firebase.google.com/project/<id>/authentication/providers`. Add the capability: an `<AppName>.entitlements` file outside `<AppName>/` (like `Config/`) with `com.apple.developer.applesignin` = `[Default]`, plus `CODE_SIGN_ENTITLEMENTS` in `project.yml`.
    - **Google:** also add the `GoogleSignIn` package (`https://github.com/google/GoogleSignIn-iOS`, product `GoogleSignIn`) and a URL type with the plist's `REVERSED_CLIENT_ID`.
    - The sign-in UI and flow are app code. Don't scaffold them here.
-5. **Firestore** (if chosen): `firebase_init` with `features.firestore`, `location_id: eur3` (EU) unless the user says otherwise. Never take the default rules: they're open to everyone for 30 days. Pass locked rules instead (signed-in users reach only their own data):
+5. **Firestore** (if chosen, or if LLMs are chosen, since they store their quota there): `firebase_init` with `features.firestore`, `location_id: eur3` (EU) unless the user says otherwise. Never take the default rules: they're open to everyone for 30 days. Pass locked rules instead (signed-in users reach only their own data):
    ```
    rules_version = '2';
    service cloud.firestore {
@@ -84,8 +87,17 @@ What the template gives you (the same shape as truster's NotificationApp):
      }
    }
    ```
-   Then deploy them with `firebase_deploy` (`only: firestore`). Commit `firebase.json`, `.firebaserc` and `firestore.rules`.
-6. More products later: add a `product:` line under the Firebase package in `project.yml`, then run `xcodegen generate`.
+   `firebase_init` leaves `.firebaserc` with no project set: write `{"projects": {"default": "<project id>"}}` yourself. Then deploy with `firebase_deploy` (`only: firestore`, and poll `firebase_deploy_status`). Commit `firebase.json`, `.firebaserc`, `firestore.rules` and `firestore.indexes.json`.
+6. **LLM backend** (if chosen):
+   - `firebase_init` with `features.auth.providers.anonymous: true`, so `LLMService` can sign users in anonymously.
+   - Add the functions entry to `firebase.json`: `"functions": [{"source": "backend", "codebase": "default", "runtime": "nodejs22"}]`.
+   - In `project.yml`, set `BACKEND_URL` to `https://europe-west1-<project id>.cloudfunctions.net` (the region is in `backend/limits.js`), then run `xcodegen generate`.
+   - Update each chosen provider's `DEFAULT_MODEL` in `backend/providers/*.js` to the provider's current recommended model (use Context7 or its docs), then run `npm --prefix backend install` and `npm --prefix backend test`.
+   - **Cloud Functions need the Blaze (pay-as-you-go) plan**, which the MCP can't switch on. Give the user the link `https://console.firebase.google.com/project/<id>/usage/details` and suggest a budget alert.
+   - **API keys: the user sets them, never the agent.** Never ask for a key or paste one. The user runs, for each provider, `! firebase functions:secrets:set ANTHROPIC_API_KEY --project <id>` (OPENAI_API_KEY, GEMINI_API_KEY), which prompts for the key.
+   - Then `firebase_deploy` (`only: functions`). The deploy fails until both Blaze and the secrets are in place.
+   - Built in: a per-user daily limit (`DAILY_REQUEST_LIMIT` in `backend/limits.js`) and input caps. Before launch, enforce App Check: anonymous auth mints new uids freely.
+7. More products later: add a `product:` line under the Firebase package in `project.yml`, then run `xcodegen generate`.
 
 **PostHog** (PostHog MCP `exec`; read its `command` description for the syntax):
 1. List projects. Reuse one or create `<Display Name>`.

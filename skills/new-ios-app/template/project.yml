@@ -47,6 +47,8 @@ targets:
         # Empty = analytics off. Paste the PostHog project token here.
         POSTHOG_API_KEY: ""
         POSTHOG_HOST: https://eu.i.posthog.com
+        # https://<region>-<firebase project>.cloudfunctions.net — see backend/limits.js REGION. # __LLM__
+        BACKEND_URL: "" # __LLM__
     info:
       # Outside __APP__/ on purpose: inside a buildable folder it would ship as a stray resource.
       path: Config/Info.plist
@@ -55,6 +57,7 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         POSTHOG_API_KEY: $(POSTHOG_API_KEY)
         POSTHOG_HOST: $(POSTHOG_HOST)
+        BACKEND_URL: $(BACKEND_URL) # __LLM__
   __APP__Tests:
     type: bundle.unit-test
     platform: iOS
