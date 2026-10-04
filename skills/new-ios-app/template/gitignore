@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Xcode / build artifacts
+*.xcuserstate
+xcuserdata/
+DerivedData/
+build/
+*.xcresult
+.swiftpm/
+buildServer.json
+
+# Editors
+.vscode/
+
+# Secrets
+*.local.xcconfig
+.env
+
+# Agent scratch
+.claude/
+.worktrees/

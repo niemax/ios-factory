@@ -25,10 +25,10 @@ Consumers: [Roompiece](https://github.com/roompiece/roompiece), [Card Scanner](h
 
 | Skill | What it does | Use when | Status |
 |---|---|---|---|
-| [`setup`](skills/setup/SKILL.md) | First-run machine setup: installs fastlane, exports Apple's Xcode agent skills, verifies the App Store Connect key from the plugin settings. | Right after installing the plugin, or on a new computer | ✅ |
+| [`setup`](skills/setup/SKILL.md) | First-run machine setup: installs fastlane and xcodegen, checks the Firebase and PostHog MCPs, exports Apple's Xcode agent skills, verifies the App Store Connect key from the plugin settings. | Right after installing the plugin, or on a new computer | ✅ |
 | [`setup-ios-cicd`](skills/setup-ios-cicd/SKILL.md) | Explores the app repo, then writes a project-tailored `AGENTS.md` (from a generic template; domain knowledge stays in the app repo) and `pr-checks.yml`. Sets up App Store Connect: bundle ID, app record, internal TestFlight group, testers. Guides the two Xcode Cloud workflows. | Onboarding a new or existing iOS app, or refreshing its `AGENTS.md` | ✅ Verified on two existing apps; new-app path not yet run |
 | [`release-ios`](skills/release-ios/SKILL.md) | Interactive release guide, one step at a time: version bump from commits → What's New → translations into every App Store language → screenshots → submit for review (default yes). Commits the staged release and opens the `main` → `production` PR. | Shipping an update to the App Store | 🟡 Built; first real release pending |
-| `new-ios-app` | Scaffolds a new app: project, folder structure, navigation, PostHog, backend (Firebase/Supabase), then calls `setup-ios-cicd`. | Starting a new app | ⏳ Planned |
+| [`new-ios-app`](skills/new-ios-app/SKILL.md) | Scaffolds a new app from [a template](skills/new-ios-app/template): XcodeGen with buildable folders, iOS 26, Swift 6, a generic `Coordinator<Route>`, nested feature folders, SwiftLint, Swift Testing. Creates the Firebase project and app (plus Auth and Firestore with locked rules, both optional and on by default) and the PostHog project through their MCPs and wires both in. Creates the GitHub repo, then calls `setup-ios-cicd`. | Starting a new app | 🟡 Template builds and its tests pass; provisioning not yet run |
 | `setup-subscriptions` | Creates App Store subscriptions and prices, and wires them to RevenueCat (via its MCP). | Adding or changing paid plans | ⏳ Planned |
 
 Skills install as one Claude Code plugin; see [Getting started](#getting-started). Invoke them as `/ios-factory:<skill>`.
@@ -65,7 +65,11 @@ ios-factory is a Claude Code plugin. On any machine:
    /plugin marketplace add niemax/ios-factory
    /plugin install ios-factory@niemax
    ```
-   Enabling it asks for your App Store Connect **Key ID**, **Issuer ID** and the **path** to the `.p8` key file. Only the path is stored, never the key. Keys live in App Store Connect → Users and Access → Integrations → Team Keys (App Manager role is enough). Change them later under `/plugin` → ios-factory → Configure.
+   Enabling it asks once for:
+   - your App Store Connect **Key ID**, **Issuer ID** and the **path** to the `.p8` key file (only the path is stored, never the key);
+   - your **Team ID**, **bundle ID prefix** and **projects folder**, so new apps never ask for them.
+
+   Keys live in App Store Connect → Users and Access → Integrations → Team Keys (App Manager role is enough). Change them later under `/plugin` → ios-factory → Configure.
 2. Run `/ios-factory:setup`. It installs fastlane if missing, exports Apple's Xcode agent skills, and checks the key works by listing your apps.
 3. Done. Run `/ios-factory:setup-ios-cicd` in an app repo, and `/ios-factory:release-ios` to ship.
 
@@ -98,5 +102,5 @@ gh secret set ASC_KEY_CONTENT --repo <owner>/<repo> < ~/path/to/AuthKey_XXXXXX.p
 ## Status and history
 
 - Decision trail: spec [roompiece#94](https://github.com/roompiece/roompiece/issues/94), map [roompiece#87](https://github.com/roompiece/roompiece/issues/87), and the move to Xcode Cloud in [#15](https://github.com/niemax/ios-factory/issues/15).
-- Open work: [#4](https://github.com/niemax/ios-factory/issues/4) (release automation, now `release-ios`), [#5](https://github.com/niemax/ios-factory/issues/5) and its design questions #7–#14 (metadata, screenshots, localization).
-- Self-tests: `scripts/test-check-commits.sh`, `scripts/test-check-swift.sh`. Refresh `swift-lint`'s rules from Apple's `soft-deprecated-apis.md` after each Xcode release.
+- Open work: map [#5](https://github.com/niemax/ios-factory/issues/5); screenshots #8, #10, #11, #12.
+- Self-tests: `scripts/test-check-commits.sh`, `scripts/test-check-swift.sh`; for the template, scaffold into a temp dir and build and test it. Refresh `swift-lint`'s rules from Apple's `soft-deprecated-apis.md` after each Xcode release.

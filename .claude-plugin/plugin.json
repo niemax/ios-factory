@@ -1,11 +1,20 @@
 {
   "name": "ios-factory",
   "displayName": "iOS Factory",
-  "description": "Onboard iOS apps onto shared PR checks and App Store Connect, and ship App Store releases interactively. Builds run on Xcode Cloud.",
-  "author": { "name": "niemax" },
+  "description": "Scaffold iOS apps, onboard them onto shared PR checks and App Store Connect, and ship App Store releases interactively. Builds run on Xcode Cloud.",
+  "author": {
+    "name": "niemax"
+  },
   "repository": "https://github.com/niemax/ios-factory",
   "license": "MIT",
-  "keywords": ["ios", "app-store-connect", "testflight", "xcode-cloud", "fastlane", "release"],
+  "keywords": [
+    "ios",
+    "app-store-connect",
+    "testflight",
+    "xcode-cloud",
+    "fastlane",
+    "release"
+  ],
   "userConfig": {
     "asc_key_id": {
       "type": "string",
@@ -21,6 +30,21 @@
       "type": "file",
       "title": "App Store Connect key file (.p8)",
       "description": "Path to the downloaded AuthKey .p8. Only the path is stored; the key itself is never read into Claude's context. Suggested home: ~/.appstoreconnect/private_keys/"
+    },
+    "team_id": {
+      "type": "string",
+      "title": "Apple Developer Team ID",
+      "description": "10 characters. developer.apple.com → Account → Membership details. Used for signing in new apps."
+    },
+    "bundle_id_prefix": {
+      "type": "string",
+      "title": "Bundle ID prefix",
+      "description": "Reverse domain for new apps, e.g. com.yourname. A new app gets <prefix>.<appname>."
+    },
+    "projects_dir": {
+      "type": "directory",
+      "title": "Projects folder",
+      "description": "Where new app repos are created, e.g. ~/Desktop/Code."
     }
   }
 }

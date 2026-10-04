@@ -1,0 +1,81 @@
+name: __APP__
+options:
+  bundleIdPrefix: __BUNDLE_PREFIX__
+  deploymentTarget:
+    iOS: "26.0"
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    from: 12.0.0
+  PostHog:
+    url: https://github.com/PostHog/posthog-ios
+    from: 3.0.0
+settings:
+  base:
+    DEVELOPMENT_TEAM: __TEAM_ID__
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+targets:
+  __APP__:
+    type: application
+    platform: iOS
+    sources:
+      # Buildable folder: any file added under __APP__/ compiles with no project edit.
+      - path: __APP__
+        type: syncedFolder
+    dependencies:
+      - package: Firebase
+        product: FirebaseCore
+      - package: Firebase # __AUTH__
+        product: FirebaseAuth # __AUTH__
+      - package: Firebase # __FIRESTORE__
+        product: FirebaseFirestore # __FIRESTORE__
+      - package: PostHog
+        product: PostHog
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: __BUNDLE_ID__
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: __DISPLAY_NAME__
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        # Empty = analytics off. Paste the PostHog project token here.
+        POSTHOG_API_KEY: ""
+        POSTHOG_HOST: https://eu.i.posthog.com
+    info:
+      # Outside __APP__/ on purpose: inside a buildable folder it would ship as a stray resource.
+      path: Config/Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        POSTHOG_API_KEY: $(POSTHOG_API_KEY)
+        POSTHOG_HOST: $(POSTHOG_HOST)
+  __APP__Tests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: __APP__Tests
+        type: syncedFolder
+    dependencies:
+      - target: __APP__
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  __APP__:
+    build:
+      targets:
+        __APP__: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - __APP__Tests
+    archive:
+      config: Release

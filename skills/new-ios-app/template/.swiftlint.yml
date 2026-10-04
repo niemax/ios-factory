@@ -1,0 +1,62 @@
+# Lint the app sources only; generated project files are not source.
+included:
+  - __APP__
+  - __APP__Tests
+
+excluded:
+  - __APP__.xcodeproj
+
+opt_in_rules:
+  - empty_count
+  - explicit_init
+  - first_where
+  - last_where
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - joined_default_parameter
+  - literal_expression_end_indentation
+  - multiline_arguments
+  - overridden_super_call
+  - prefer_self_type_over_type_of_self
+  - redundant_nil_coalescing
+  - sorted_first_last
+  - toggle_bool
+  - unneeded_parentheses_in_closure_argument
+  - unused_import
+  - yoda_condition
+
+disabled_rules:
+  - trailing_comma
+
+# `todo` stays ON deliberately: a TODO the linter ignores is a placeholder that ships.
+analyzer_rules:
+  - unused_declaration
+
+force_cast: error
+force_try: error
+force_unwrapping: error
+
+line_length:
+  warning: 140
+  error: 200
+  ignores_comments: true
+  ignores_urls: true
+
+type_body_length:
+  warning: 250
+  error: 400
+
+file_length:
+  warning: 400
+  error: 600
+
+function_body_length:
+  warning: 50
+  error: 80
+
+identifier_name:
+  min_length: 3
+  excluded: [id, url, x, y]
+
+nesting:
+  type_level: 2
