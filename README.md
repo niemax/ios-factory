@@ -7,14 +7,15 @@ Consumers: [Roompiece](https://github.com/roompiece/roompiece), [Card Scanner](h
 ## What it delivers
 
 ```
- /setup-ios-cicd          every PR               merge to main             /release-ios → merge to production
- ───────────────          ────────               ─────────────             ──────────────────────────────────
- AGENTS.md                commit-lint            Xcode Cloud archives      version · What's New · translations
- PR checks                swift-lint             → internal TestFlight     · screenshots, staged in a PR
- App Store Connect app    (Linux, free)          (internal group gets      → Xcode Cloud builds → release.yml
- TestFlight group                                 every build)             uploads + submits for review
+ /new-ios-app          /setup-ios-cicd        every PR           merge to main           /release-ios → merge to production
+ ────────────          ───────────────        ────────           ─────────────           ──────────────────────────────────
+ XcodeGen project      AGENTS.md              commit-lint        Xcode Cloud archives    version · What's New · translations
+ Coordinator, folders  PR checks              swift-lint         → internal TestFlight   · screenshots, staged in a PR
+ Firebase · PostHog    App Store Connect app  (Linux, free)      (internal group gets    → Xcode Cloud builds → release.yml
+ GitHub repo  ───────→ TestFlight group                           every build)           uploads + submits for review
 ```
 
+- **A new app in one command.** Project, navigation, folder structure, Firebase and PostHog provisioned through their MCPs, a private GitHub repo, then straight into onboarding.
 - **Onboarding in one command.** Wire any app repo (new or existing) onto the shared checks and App Store Connect setup.
 - **Every PR checked.** Conventional Commits, plus Apple's SwiftUI guidance on the lines you add.
 - **Internal builds on every merge to `main`.** Xcode Cloud uploads, and the internal TestFlight group gets each build automatically.
@@ -26,9 +27,9 @@ Consumers: [Roompiece](https://github.com/roompiece/roompiece), [Card Scanner](h
 | Skill | What it does | Use when | Status |
 |---|---|---|---|
 | [`setup`](skills/setup/SKILL.md) | First-run machine setup: installs fastlane and xcodegen, checks the Firebase and PostHog MCPs, exports Apple's Xcode agent skills, verifies the App Store Connect key from the plugin settings. | Right after installing the plugin, or on a new computer | ✅ |
-| [`setup-ios-cicd`](skills/setup-ios-cicd/SKILL.md) | Explores the app repo, then writes a project-tailored `AGENTS.md` (from a generic template; domain knowledge stays in the app repo) and `pr-checks.yml`. Sets up App Store Connect: bundle ID, app record, internal TestFlight group, testers. Guides the two Xcode Cloud workflows. | Onboarding a new or existing iOS app, or refreshing its `AGENTS.md` | ✅ Verified on two existing apps; new-app path not yet run |
+| [`setup-ios-cicd`](skills/setup-ios-cicd/SKILL.md) | Explores the app repo, then writes a project-tailored `AGENTS.md` (from a generic template; domain knowledge stays in the app repo) and `pr-checks.yml`. Sets up App Store Connect: bundle ID, app record, internal TestFlight group, testers. Guides the two Xcode Cloud workflows. | Onboarding a new or existing iOS app, or refreshing its `AGENTS.md` | ✅ Verified on two existing apps and a fresh scaffold; creating a new App Store Connect app via `produce` not yet run |
 | [`release-ios`](skills/release-ios/SKILL.md) | Interactive release guide, one step at a time: version bump from commits → What's New → translations into every App Store language → screenshots → submit for review (default yes). Commits the staged release and opens the `main` → `production` PR. | Shipping an update to the App Store | 🟡 Built; first real release pending |
-| [`new-ios-app`](skills/new-ios-app/SKILL.md) | Scaffolds a new app from [a template](skills/new-ios-app/template): XcodeGen with buildable folders, iOS 26, Swift 6, a generic `Coordinator<Route>`, nested feature folders, SwiftLint, Swift Testing. Creates the Firebase project and app (plus Auth and Firestore with locked rules, both optional and on by default) and the PostHog project through their MCPs and wires both in. Creates the GitHub repo, then calls `setup-ios-cicd`. | Starting a new app | 🟡 Template builds and its tests pass; provisioning not yet run |
+| [`new-ios-app`](skills/new-ios-app/SKILL.md) | Scaffolds a new app from [a template](skills/new-ios-app/template): XcodeGen with buildable folders, iOS 26, Swift 6, a generic `Coordinator<Route>`, nested feature folders, SwiftLint, Swift Testing. Creates the Firebase project and app (plus Auth and Firestore with locked rules, both optional and on by default) and the PostHog project through their MCPs and wires both in. Creates the GitHub repo, then calls `setup-ios-cicd`. | Starting a new app | ✅ Verified end to end on a throwaway app (Firebase, PostHog, GitHub, PR checks green); App Store Connect stopped at the dry run |
 | `setup-subscriptions` | Creates App Store subscriptions and prices, and wires them to RevenueCat (via its MCP). | Adding or changing paid plans | ⏳ Planned |
 
 Skills install as one Claude Code plugin; see [Getting started](#getting-started). Invoke them as `/ios-factory:<skill>`.
@@ -87,6 +88,7 @@ gh secret set ASC_KEY_CONTENT --repo <owner>/<repo> < ~/path/to/AuthKey_XXXXXX.p
 
 ## What stays manual (Apple offers no API)
 
+- **Sign in with Apple** in Firebase Auth: one toggle in the Firebase console (the MCP can't enable it). `new-ios-app` gives you the link.
 - **Creating the app record** for a brand-new app. `produce` handles it, but it needs your Apple ID login with 2FA.
 - **Connecting an app to Xcode Cloud** and creating its two workflows in Xcode. `setup-ios-cicd` guides you through it.
 - **The App Privacy questionnaire**, agreements, tax and banking in App Store Connect.
