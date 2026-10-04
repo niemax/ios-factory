@@ -19,7 +19,7 @@ Consumers: [Roompiece](https://github.com/roompiece/roompiece), [Card Scanner](h
 - **Every PR checked.** Conventional Commits, plus Apple's SwiftUI guidance on the lines you add.
 - **Internal builds on every merge to `main`.** Xcode Cloud uploads, and the internal TestFlight group gets each build automatically.
 - **App Store releases on merge to `production`.** You go through the release interactively in the CLI. The upload and submission after the merge is hands-off.
-- **€0 per release.** Builds run on Xcode Cloud's free tier. Everything else runs on free Linux runners or your Mac.
+- **€0 per release within the free tiers.** Builds use Xcode Cloud's 25 included compute hours a month (roughly 20–30 min per build). Checks and the release upload run on GitHub Linux runners: free for public repos, and on private repos they count against GitHub's 2,000 free minutes a month (then ~$0.006/min). The upload job mostly waits for Xcode Cloud, 30–90 min per release. No paid macOS runners. The old Fastlane build on those cost about $1.30–1.60 per release.
 
 ## Skills
 
