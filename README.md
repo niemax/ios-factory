@@ -1,106 +1,94 @@
 # ios-factory
 
-A shared, **public** repo for reusable iOS release tooling. Roompiece is the first consumer; more apps are expected to onboard onto the same tooling over time. This README is a living status doc — kept current as tickets close, so an agent picking this repo up cold (or the human) doesn't have to reconstruct history from the issue tracker.
+Reusable tooling that takes an iOS app from repo setup to App Store release with as few clicks as possible. Claude Code skills drive the work interactively; shared GitHub workflows and Fastlane lanes do the repeatable parts.
 
-**Visibility note:** started private, switched to public during Ticket 1's real acceptance run — GitHub only allows a private repo's reusable workflows to be called from repos under the *same* owner/org, and `roompiece/roompiece` is a different owner than `niemax`. No secrets or business logic live here (those stay in each consuming app repo), so the exposure from going public is low; it also better serves reuse across apps that may live under yet other owners in the future.
+Consumers: [Roompiece](https://github.com/roompiece/roompiece), [Card Scanner](https://github.com/pokecardscanner/card-scanner).
 
-## What this repo is for right now
+## What it delivers
 
-**Xcode Cloud owns the binary** — build, sign, test, TestFlight upload — inside the Apple Developer Program's free 25 compute hours/month. **ios-factory owns only what Xcode Cloud can't do**, all on `ubuntu-latest` (no paid macOS minutes, ever — see [#15](https://github.com/niemax/ios-factory/issues/15)):
-
-- Conventional Commits enforcement on PRs (#3)
-- Version + changelog inferred from commits/PRs, written to TestFlight via the App Store Connect API (#4, being re-scoped under #15)
-- Public App Store metadata: release notes, localizations, screenshots via the App Store Connect API (wayfinder map #5)
-
-The wider "app factory" vision (design system generator, screen generators, Firebase/PostHog scaffolding for new apps) is out of scope here — future work.
-
-## Where the decisions came from
-
-- **Spec:** [Reusable iOS CI/CD + App Store submission](https://github.com/roompiece/roompiece/issues/94) (on `roompiece/roompiece`'s tracker)
-- **Original decision trail:** [Wayfinder map #87](https://github.com/roompiece/roompiece/issues/87) and its tickets (#88–#93)
-- **Pivot to Xcode Cloud for the binary:** [#15](https://github.com/niemax/ios-factory/issues/15)
-
-## Current status
-
-**Done:**
-- `AGENTS.md` + `docs/agents/{issue-tracker,triage-labels,domain}.md` scaffolded
-- [#1 — Parameterized Fastlane release pipeline](https://github.com/niemax/ios-factory/issues/1) — proven through the test gate, then **deleted** per #15: a GitHub-hosted macOS runner costs ~$1.30–1.60 per release, and duplicating Xcode Cloud's upload would have clashed on build numbers. Recoverable from git history (last present at `98af124`).
-- [#6](https://github.com/niemax/ios-factory/issues/6) — existing ASC API key has App Manager role, sufficient for metadata/screenshot work
-- `ASC_KEY_ID`/`ASC_ISSUER_ID`/`ASC_KEY_CONTENT` are set on `roompiece/roompiece` (by the human, never handled by an agent)
-
-- [#3 — Commit lint](https://github.com/niemax/ios-factory/issues/3): reusable workflow + check script, wired into `roompiece/roompiece` via `pr-checks.yml` (roompiece#129). **Advisory, not required:** branch protection/rulesets need GitHub Pro/Team on a private repo, and the org is on Free. Don't merge red PRs.
-
-**Not done yet:**
-- #15 open questions: how ios-factory learns Xcode Cloud's build finished processing (poll ASC API vs. webhook → `repository_dispatch`)
-- #4 (re-scope under #15), #2 (`setup-ios-cicd`, re-scope under #15), wayfinder #5 and its grilling tickets (#7–#14)
-- `roompiece/roompiece` branch `ios-cicd-release-workflow` (old tag-triggered Fastlane caller, never merged) can be deleted
-
-## Commit lint (`commit-lint.yml`)
-
-Validates every non-merge commit in a PR against Conventional Commits: `<type>[(scope)][!]: <description>`, types `feat fix perf refactor docs style test build ci chore revert`. Git's default `Revert "..."` subject is also allowed. Merge commits are skipped.
-
-Caller in the app repo (e.g. `.github/workflows/pr-checks.yml`):
-
-```yaml
-name: PR checks
-on:
-  pull_request:
-jobs:
-  commit-lint:
-    uses: niemax/ios-factory/.github/workflows/commit-lint.yml@main
+```
+ /setup-ios-cicd          every PR               merge to main             /release-ios → merge to production
+ ───────────────          ────────               ─────────────             ──────────────────────────────────
+ AGENTS.md                commit-lint            Xcode Cloud archives      version · What's New · translations
+ PR checks                swift-lint             → internal TestFlight     · screenshots, staged in a PR
+ App Store Connect app    (Linux, free)          (internal group gets      → Xcode Cloud builds → release.yml
+ TestFlight group                                 every build)             uploads + submits for review
 ```
 
-If the app repo's plan allows it (public repo, or Pro/Team), require the `commit-lint / Conventional Commits` status check in branch protection for its merge target. Otherwise it's advisory.
+- **Onboarding in one command.** Wire any app repo (new or existing) onto the shared checks and App Store Connect setup.
+- **Every PR checked.** Conventional Commits, plus Apple's SwiftUI guidance on the lines you add.
+- **Internal builds on every merge to `main`.** Xcode Cloud uploads, and the internal TestFlight group gets each build automatically.
+- **App Store releases on merge to `production`.** You go through the release interactively in the CLI. The upload and submission after the merge is hands-off.
+- **€0 per release.** Builds run on Xcode Cloud's free tier. Everything else runs on free Linux runners or your Mac.
 
-Check script self-test: `scripts/test-check-commits.sh`.
+## Skills
 
-## Swift lint (`swift-lint.yml`)
+| Skill | What it does | Use when | Status |
+|---|---|---|---|
+| [`setup-ios-cicd`](skills/setup-ios-cicd/SKILL.md) | Explores the app repo, then writes a project-tailored `AGENTS.md` (from a generic template; domain knowledge stays in the app repo) and `pr-checks.yml`. Sets up App Store Connect: bundle ID, app record, internal TestFlight group, testers. Guides the two Xcode Cloud workflows. | Onboarding a new or existing iOS app, or refreshing its `AGENTS.md` | ✅ Verified on two existing apps; new-app path not yet run |
+| [`release-ios`](skills/release-ios/SKILL.md) | Interactive release guide, one step at a time: version bump from commits → What's New → translations into every App Store language → screenshots → submit for review (default yes). Commits the staged release and opens the `main` → `production` PR. | Shipping an update to the App Store | 🟡 Built; first real release pending |
+| `new-ios-app` | Scaffolds a new app: project, folder structure, navigation, PostHog, backend (Firebase/Supabase), then calls `setup-ios-cicd`. | Starting a new app | ⏳ Planned |
+| `setup-subscriptions` | Creates App Store subscriptions and prices, and wires them to RevenueCat (via its MCP). | Adding or changing paid plans | ⏳ Planned |
 
-Flags discouraged Swift/SwiftUI APIs on **lines a PR adds**, so legacy code is only flagged once touched. Rules come from Apple's Xcode 27 agent skills (`swiftui-specialist`: soft-deprecated APIs, `ObservableObject` → `@Observable`, `AnyView`, index-based `ForEach` identity), plus the shared concurrency rule (no `MainActor.run` / `DispatchQueue.main`). Soft-deprecated APIs compile without warnings, so nothing else catches them. Findings show as inline PR annotations. For a deliberate exception, put `// swift-lint:allow` on the line.
-
-```yaml
-  swift-lint:
-    uses: niemax/ios-factory/.github/workflows/swift-lint.yml@main
-```
-
-The rule list lives in `scripts/check-swift.sh`. Refresh it from `xcrun agent skills export --output-dir <dir>` → `swiftui-specialist/references/soft-deprecated-apis.md` after each Xcode release. Self-test: `scripts/test-check-swift.sh`.
-
-## `setup-ios-cicd` skill
-
-`skills/setup-ios-cicd/` onboards an app repo: it writes `pr-checks.yml` (commit-lint + swift-lint) and a project-tailored `AGENTS.md` from `AGENTS.template.md`. The template holds only the generic basics (conventions, Apple guidance, concurrency, commits, release). The skill fills in architecture, the load-bearing decision and invariants by exploring the app repo and confirming with you, so domain knowledge never lands in this public repo.
-
-Install once:
+Install a skill once (symlink, so `git pull` updates it):
 
 ```bash
-ln -s ~/Desktop/Code/ios-factory/skills/setup-ios-cicd ~/.claude/skills/setup-ios-cicd
+ln -s ~/Desktop/Code/ios-factory/skills/<skill> ~/.claude/skills/<skill>
 ```
 
-## Fastlane: App Store Connect only
+## Shared workflows
 
-`fastlane/Fastfile` holds App Store Connect tooling. **Builds stay on Xcode Cloud.** Fastlane never archives or uploads here. Install with `brew install fastlane`, run from this repo's root.
+Called from a consuming repo's thin workflow files (the skills write them). All run on `ubuntu-latest`.
 
-- `fastlane ios setup bundle_id:… name:… [group:…] [testers:a@b.com,…] [dry_run:true]`: idempotent app setup. It creates the bundle ID and app record via `produce` (Apple ID login with 2FA, only when the app doesn't exist yet), then makes an internal TestFlight group with access to all builds (reusing an existing one), then adds testers. API key via `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_PATH`.
-- `fastlane ios release app_dir:… [dry_run:true]`: ships a staged release. It waits for Xcode Cloud's build of the version in `fastlane/release.json`, then `deliver` uploads release notes (+ screenshots if staged), attaches the build and submits if asked. Runs in CI via `.github/workflows/release.yml` (Linux) on a merge to `production` that touches `release.json`.
-- `fastlane ios locales bundle_id:…`: the listing's languages and the live version's state.
+| Workflow | Trigger in the app repo | What it does |
+|---|---|---|
+| [`commit-lint.yml`](.github/workflows/commit-lint.yml) | every PR | Checks every non-merge commit against Conventional Commits (`type(scope)!: description`). Version bumps and release notes depend on it. |
+| [`swift-lint.yml`](.github/workflows/swift-lint.yml) | every PR | Flags soft-deprecated SwiftUI APIs, `ObservableObject`, `AnyView`, index-based `ForEach` identity, `MainActor.run` and `DispatchQueue.main`, **only on lines the PR adds**, as inline annotations. Rules come from Apple's Xcode agent skills. Escape hatch: `// swift-lint:allow`. |
+| [`release.yml`](.github/workflows/release.yml) | push to `production` touching `fastlane/release.json` | Waits for Xcode Cloud's build of the staged version, then uploads release notes (+ screenshots), attaches the build and submits for review if staged so. |
 
-## `release-ios` skill
+Checks are advisory unless the app repo's plan allows branch protection (a public repo, or GitHub Pro/Team). Never merge while one is red.
 
-`skills/release-ios/` is an interactive release guide: version bump → What's New → translations into every listing language → screenshots → submit-for-review (default yes). It commits the staged release on `main` and opens the `main` → `production` PR. Merging ships it, hands-off. Install: `ln -s ~/Desktop/Code/ios-factory/skills/release-ios ~/.claude/skills/release-ios`.
+## Fastlane lanes
 
-## Setting secrets on a consuming app repo
+For App Store Connect work only. **Fastlane never builds:** that's Xcode Cloud's job. Run from this repo's root.
 
-Needed for the App Store Connect API work (#4/#5). Never paste key material into an agent session. Run these yourself:
+| Lane | What it does |
+|---|---|
+| `fastlane ios setup bundle_id:… name:… [group:…] [testers:…] [dry_run:true]` | Idempotent app setup: bundle ID + app record via `produce` (Apple ID + 2FA, only for a new app), an internal TestFlight group with access to all builds (an existing one is reused), testers. |
+| `fastlane ios release app_dir:… [dry_run:true]` | Ships what `release-ios` staged (CI runs this via `release.yml`). |
+| `fastlane ios locales bundle_id:…` | The App Store listing's languages and the latest version's review state. |
 
-```
+## Getting started
+
+1. `brew install fastlane`
+2. `cp fastlane/.env.example fastlane/.env` and fill in the App Store Connect Key ID, Issuer ID and the **path** to the `.p8` key. The file is gitignored, and the key itself never goes in it. Keys live in App Store Connect → Users and Access → Integrations → Team Keys (App Manager role is enough).
+3. Symlink the skills (above). Then run `/setup-ios-cicd` from an app repo.
+4. Export Apple's Xcode agent skills, which the generated `AGENTS.md` and `swift-lint` build on: `xcrun agent skills export --output-dir ~/.claude/skills`
+
+For hands-off releases, each app repo needs the key as GitHub secrets. Run these yourself; never paste key material into an agent session:
+
+```bash
 gh secret set ASC_KEY_ID --repo <owner>/<repo> --body "<key id>"
 gh secret set ASC_ISSUER_ID --repo <owner>/<repo> --body "<issuer id>"
 gh secret set ASC_KEY_CONTENT --repo <owner>/<repo> < ~/path/to/AuthKey_XXXXXX.p8
 ```
 
-## Key decisions already locked
+## What stays manual (Apple offers no API)
 
-- **No paid CI minutes.** Binary path = Xcode Cloud (free tier). ios-factory workflows run on Linux only (#15). Fastlane is back, but for App Store Connect work only (setup, metadata, submission), never builds.
-- Secrets vs config: credentials via `gh secret set` run by the human; non-sensitive config inline as `with:` inputs in the consuming repo's thin workflow file — no separate config file.
-- Merge-to-`production` is the release moment; version/changelog inferred from Conventional Commits; App Review submission is a default-off toggle (spec #94 Amendment v2, #4).
-- **Merge to `main` → internal TestFlight build** (Xcode Cloud archive + upload; internal testers only). **Merge to `production` → App Store release**: version bump, release notes / What's New, App Store metadata/screenshots (#5), submit-for-review. Those submission steps never trigger on `main`. PR checks (commit-lint, swift-lint) run on every PR.
-- Reuse mechanism: logic lives only in this repo as reusable workflows + scripts; consuming repos hold thin callers.
+- **Creating the app record** for a brand-new app. `produce` handles it, but it needs your Apple ID login with 2FA.
+- **Connecting an app to Xcode Cloud** and creating its two workflows in Xcode. `setup-ios-cicd` guides you through it.
+- **The App Privacy questionnaire**, agreements, tax and banking in App Store Connect.
+
+## Principles
+
+- **No paid CI minutes.** Builds go through Xcode Cloud; everything here runs on Linux or locally ([#15](https://github.com/niemax/ios-factory/issues/15)).
+- **`main` = internal, `production` = public.** A merge to `main` produces an internal TestFlight build. Anything that submits to the App Store happens only on a merge to `production`.
+- **Logic lives here; app repos hold thin callers.** Fix it once and every app gets it.
+- **Public repo, no domain knowledge.** No secrets or product decisions live here. Templates hold only generic basics; each app's specifics go into that app's own repo.
+- **Dry run before every write** to an Apple account. Every lane checks before it changes anything, so re-running is safe.
+
+## Status and history
+
+- Decision trail: spec [roompiece#94](https://github.com/roompiece/roompiece/issues/94), map [roompiece#87](https://github.com/roompiece/roompiece/issues/87), and the move to Xcode Cloud in [#15](https://github.com/niemax/ios-factory/issues/15).
+- Open work: [#4](https://github.com/niemax/ios-factory/issues/4) (release automation, now `release-ios`), [#5](https://github.com/niemax/ios-factory/issues/5) and its design questions #7–#14 (metadata, screenshots, localization).
+- Self-tests: `scripts/test-check-commits.sh`, `scripts/test-check-swift.sh`. Refresh `swift-lint`'s rules from Apple's `soft-deprecated-apis.md` after each Xcode release.
