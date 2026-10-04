@@ -49,16 +49,18 @@ jobs:
 
 ## 4. App Store Connect
 
-Runs `scripts/asc-setup.swift` from the ios-factory checkout (this skill's folder is `<ios-factory>/skills/setup-ios-cicd`, so the script is `../../scripts/asc-setup.swift` from here). It's idempotent: re-running only fills gaps.
+Uses the `setup` lane in `<ios-factory>/fastlane/Fastfile` (this skill's folder is `<ios-factory>/skills/setup-ios-cicd`). Needs `fastlane` (`brew install fastlane`). Idempotent: re-running only fills gaps.
 
 1. Ask for the App Store Connect key: Key ID, Issuer ID, and the **path** to the `.p8` file. Never open, print or copy the key file. Only pass the path in `ASC_KEY_PATH`.
 2. Confirm the app name, the internal TestFlight group name (default `Internal Testers`) and tester emails. Testers must already be users on the team.
-3. Run with `--dry-run` first and show the output:
+3. Dry run first, from the ios-factory root, and show the output:
    ```bash
-   ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=… swift <ios-factory>/scripts/asc-setup.swift \
-     --bundle-id <id> --name "<App>" --group "Internal Testers" --tester a@b.com --dry-run
+   ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=… fastlane ios setup \
+     bundle_id:<id> name:"<App>" group:"Internal Testers" testers:a@b.com,c@d.com dry_run:true
    ```
-4. After the user agrees, run it again without `--dry-run`. Exit code 2 means the app record doesn't exist: the API can't create apps, so relay the printed web-form values, wait for the user to create it, then re-run.
+4. After the user agrees, run it without `dry_run`.
+   - **App already exists:** runs non-interactively with the API key, so run it yourself.
+   - **New app:** `produce` creates the bundle ID and app record, which needs an Apple ID login with a password and 2FA prompt. Hand the user the exact command to run with `! FASTLANE_USER=<apple id> …`, then re-run the lane yourself to confirm.
 
 ## 5. Done: tell the user
 

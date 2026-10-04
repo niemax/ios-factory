@@ -75,6 +75,13 @@ Install once:
 ln -s ~/Desktop/Code/ios-factory/skills/setup-ios-cicd ~/.claude/skills/setup-ios-cicd
 ```
 
+## Fastlane: App Store Connect only
+
+`fastlane/Fastfile` holds App Store Connect tooling. **Builds stay on Xcode Cloud.** Fastlane never archives or uploads here. Install with `brew install fastlane`, run from this repo's root.
+
+- `fastlane ios setup bundle_id:… name:… [group:…] [testers:a@b.com,…] [dry_run:true]`: idempotent app setup. It creates the bundle ID and app record via `produce` (Apple ID login with 2FA, only when the app doesn't exist yet), then makes an internal TestFlight group with access to all builds (reusing an existing one), then adds testers. API key via `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_PATH`.
+- Release lanes for `production` (`deliver` / `pilot`: notes, metadata, screenshots, submit) come with #4/#5.
+
 ## Setting secrets on a consuming app repo
 
 Needed for the App Store Connect API work (#4/#5). Never paste key material into an agent session. Run these yourself:
@@ -87,7 +94,7 @@ gh secret set ASC_KEY_CONTENT --repo <owner>/<repo> < ~/path/to/AuthKey_XXXXXX.p
 
 ## Key decisions already locked
 
-- **No paid CI minutes.** Binary path = Xcode Cloud (free tier). ios-factory workflows run on Linux only (#15).
+- **No paid CI minutes.** Binary path = Xcode Cloud (free tier). ios-factory workflows run on Linux only (#15). Fastlane is back, but for App Store Connect work only (setup, metadata, submission), never builds.
 - Secrets vs config: credentials via `gh secret set` run by the human; non-sensitive config inline as `with:` inputs in the consuming repo's thin workflow file — no separate config file.
 - Merge-to-`production` is the release moment; version/changelog inferred from Conventional Commits; App Review submission is a default-off toggle (spec #94 Amendment v2, #4).
 - **Merge to `main` → internal TestFlight build** (Xcode Cloud archive + upload; internal testers only). **Merge to `production` → App Store release**: version bump, release notes / What's New, App Store metadata/screenshots (#5), submit-for-review. Those submission steps never trigger on `main`. PR checks (commit-lint, swift-lint) run on every PR.

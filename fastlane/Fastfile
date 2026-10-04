@@ -1,0 +1,86 @@
+default_platform(:ios)
+
+# App Store Connect tooling for any app — builds are Xcode Cloud's job, never
+# this file's. Run from this repo's root: `fastlane ios <lane> key:value …`.
+#
+# API key (all lanes): ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH (path to the
+# .p8). The key is only handed to fastlane's own signer, never printed.
+
+platform :ios do
+  desc <<~DESC
+    Idempotent App Store Connect setup for one app. Safe to re-run.
+
+      1. Bundle ID + app record: if the app doesn't exist, `produce` creates
+         both. The App Store Connect API can't create apps, so that step logs
+         in with your Apple ID (FASTLANE_USER, password + 2FA prompt) — run it
+         yourself in a terminal. Skipped entirely when the app exists.
+      2. Internal TestFlight group with access to all builds (reuses any
+         existing internal all-builds group, whatever it's called).
+      3. Testers, comma-separated (must already be users on the team).
+
+    Options: bundle_id:, name:, [sku:], [language:], [group:], [testers:], [dry_run:true]
+  DESC
+  lane :setup do |options|
+    bundle_id = options.fetch(:bundle_id)
+    name = options.fetch(:name)
+    group_name = options[:group] || "Internal Testers"
+    testers = options[:testers].to_s.split(",").map(&:strip).reject(&:empty?)
+    dry_run = options[:dry_run].to_s == "true"
+
+    app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_filepath: File.expand_path(ENV.fetch("ASC_KEY_PATH"))
+    )
+
+    # 1. Bundle ID + app record
+    app = Spaceship::ConnectAPI::App.find(bundle_id)
+    if app
+      UI.success("App record exists (#{app.id}); bundle ID registered")
+    elsif dry_run
+      UI.important("Would create bundle ID #{bundle_id} + app record \"#{name}\" via produce (needs Apple ID login)")
+      next
+    else
+      produce(
+        app_identifier: bundle_id,
+        app_name: name,
+        sku: options[:sku] || bundle_id,
+        language: options[:language] || "en-US",
+        platform: "ios"
+      )
+      app = Spaceship::ConnectAPI::App.find(bundle_id) || UI.user_error!("App still not found after produce")
+    end
+
+    # 2. Internal TestFlight group that gets every build
+    groups = app.get_beta_groups
+    groups.each do |g|
+      UI.message("existing group \"#{g.name}\" (#{g.is_internal_group ? 'internal' : 'external'}#{g.has_access_to_all_builds ? ', all builds' : ''})")
+    end
+    group = groups.find { |g| g.name == group_name } ||
+            groups.find { |g| g.is_internal_group && g.has_access_to_all_builds }
+    if group
+      UI.success("Using TestFlight group \"#{group.name}\"")
+    elsif dry_run
+      UI.important("Would create internal TestFlight group \"#{group_name}\" with access to all builds")
+    else
+      group = app.create_beta_group(group_name: group_name, is_internal_group: true, has_access_to_all_builds: true)
+      UI.success("Created internal TestFlight group \"#{group_name}\"")
+    end
+
+    # 3. Testers
+    testers.each do |email|
+      if group && Spaceship::ConnectAPI::BetaTester.all(filter: { email: email, betaGroups: group.id }).any?
+        UI.success("Tester #{email} already in group")
+      elsif dry_run || group.nil?
+        UI.important("Would add tester #{email}")
+      else
+        begin
+          Spaceship::ConnectAPI.post_beta_tester_assignment(beta_group_ids: [group.id], attributes: { email: email })
+          UI.success("Added tester #{email}")
+        rescue => e
+          UI.error("Tester #{email}: #{e.message} (internal testers must already be users on the team)")
+        end
+      end
+    end
+  end
+end
