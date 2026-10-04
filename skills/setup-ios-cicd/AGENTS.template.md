@@ -53,8 +53,9 @@ can't exercise -->
 
 **Feature folder structure:**
 <!-- tailor: describe the structure the code ALREADY uses (inspect 2–3 feature
-folders). For a greenfield app, use: Views/ (view + its view model),
-Components/, Utils/ -->
+folders). For a greenfield app (new-ios-app's template), use the nested shape:
+Features/<Feature>/<Screen>/{Views,ViewModel,Components}/ plus the feature's
+Models/ and Utils/; a one-screen feature skips the <Screen> level -->
 ```
 {{feature folder tree}}
 ```

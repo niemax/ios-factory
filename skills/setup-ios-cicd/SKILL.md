@@ -22,7 +22,7 @@ Explore → present → confirm → write. Run from the app repo's root.
 1. Detected facts (scheme, paths, target, stack): confirm or correct as a batch.
 2. **The load-bearing decision:** propose one from ADRs/PRD (the differentiator or the cost model everything follows from). The user must confirm or rewrite it. Never guess silently.
 3. **Invariants:** propose bullets grouped by area, each traced to an ADR, code comment or config file. Drop anything the user rejects. Don't invent rules the repo doesn't hold.
-4. If an `AGENTS.md` exists: show what will be added, changed and kept.
+4. If an `AGENTS.md` exists: show what will be added, changed and kept. If `new-ios-app` wrote it moments ago, skip steps 2–3 and only check it against the repo.
 
 ## 3. Write
 

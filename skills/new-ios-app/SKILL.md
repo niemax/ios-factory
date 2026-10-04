@@ -40,7 +40,20 @@ Never name the module after a framework type (`NotificationCenter`, `Color`, `Ap
 FIREBASE_AUTH=1|0 FIREBASE_FIRESTORE=1|0 \
   "${CLAUDE_PLUGIN_ROOT}/skills/new-ios-app/scaffold.sh" <dest> <AppName> <bundle.id> "${user_config.team_id}" "<Display Name>"
 ```
-It copies [template/](template/), fills the placeholders, runs `xcodegen generate` and `git init`. Then write `CONTEXT.md`: the one-liner under `# <Display Name>`, plus an empty `## Glossary`.
+It copies [template/](template/), fills the placeholders, runs `xcodegen generate` and `git init`.
+
+**Before any other code: AGENTS.md and CONTEXT.md.** Everything after this point, including the provisioning edits and the user's next session, follows the project rules, so write them first:
+- `CONTEXT.md`: the one-liner under `# <Display Name>`, plus an empty `## Glossary`.
+- `AGENTS.md`: fill `${CLAUDE_PLUGIN_ROOT}/skills/setup-ios-cicd/AGENTS.template.md` from what's already known, without exploring:
+  - name, scheme and paths from step 1;
+  - the stack from `project.yml` (SwiftUI, Swift 6, Observation, Swift Testing, XcodeGen with buildable folders, SwiftLint, Firebase plus the chosen products, PostHog);
+  - iOS 26, iPhone, portrait;
+  - the greenfield feature folder tree;
+  - the load-bearing decision drafted from the one-liner (the user confirms or rewrites it);
+  - no invariant sections yet.
+  - Same check as setup-ios-cicd: `grep -n '{{\|tailor' AGENTS.md` returns nothing.
+
+Then read the new `AGENTS.md` and follow it for the rest of this skill.
 
 What the template gives you (the same shape as truster's NotificationApp):
 - `AppDelegate/AppEntry.swift`: composition root. Starts Firebase and analytics, then shows `HomeStack`.
