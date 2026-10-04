@@ -1,11 +1,11 @@
+require "json"
+
 default_platform(:ios)
 
 def asc_api_key!
-  app_store_connect_api_key(
-    key_id: ENV.fetch("ASC_KEY_ID"),
-    issuer_id: ENV.fetch("ASC_ISSUER_ID"),
-    key_filepath: File.expand_path(ENV.fetch("ASC_KEY_PATH"))
-  )
+  # Local runs pass a file path; CI passes the raw .p8 contents from a secret.
+  key = ENV["ASC_KEY_PATH"] ? { key_filepath: File.expand_path(ENV["ASC_KEY_PATH"]) } : { key_content: ENV.fetch("ASC_KEY_CONTENT") }
+  app_store_connect_api_key(key_id: ENV.fetch("ASC_KEY_ID"), issuer_id: ENV.fetch("ASC_ISSUER_ID"), **key)
 end
 
 # App Store Connect tooling for any app — builds are Xcode Cloud's job, never
@@ -88,4 +88,81 @@ platform :ios do
     end
   end
 
+
+  desc <<~DESC
+    Ship a staged release to the App Store. Runs after a merge to production
+    (CI, Linux), or locally. Reads what /release-ios staged in the app repo:
+
+      fastlane/release.json                       {"bundle_id","version","submit_for_review"}
+      fastlane/metadata/<locale>/release_notes.txt
+      fastlane/screenshots/<locale>/…             (optional)
+
+    Waits for Xcode Cloud's build of that version to finish processing, then
+    deliver creates/updates the App Store version, uploads notes (and
+    screenshots if staged), attaches the build and submits if asked.
+
+    Options: app_dir: (app repo root), [timeout_minutes: 90], [dry_run:true]
+  DESC
+  lane :release do |options|
+    app_dir = File.expand_path(options.fetch(:app_dir))
+    dry_run = options[:dry_run].to_s == "true"
+    release = JSON.parse(File.read(File.join(app_dir, "fastlane/release.json")))
+    bundle_id = release.fetch("bundle_id")
+    version = release.fetch("version")
+    submit = release.fetch("submit_for_review", true)
+    metadata_path = File.join(app_dir, "fastlane/metadata")
+    screenshots_path = File.join(app_dir, "fastlane/screenshots")
+    has_screenshots = Dir.exist?(screenshots_path) && !Dir.glob(File.join(screenshots_path, "*/*.{png,jpg,jpeg}")).empty?
+    locales = Dir.glob(File.join(metadata_path, "*/release_notes.txt")).map { |f| File.basename(File.dirname(f)) }.sort
+    UI.user_error!("No fastlane/metadata/<locale>/release_notes.txt staged") if locales.empty?
+    UI.message("Release #{version} of #{bundle_id}: notes in #{locales.join(', ')}; screenshots: #{has_screenshots ? 'yes' : 'keep existing'}; submit for review: #{submit}")
+
+    asc_api_key!
+    app = Spaceship::ConnectAPI::App.find(bundle_id) || UI.user_error!("No app record for #{bundle_id}")
+
+    # Wait for the newest build of this version to finish processing.
+    deadline = Time.now + options.fetch(:timeout_minutes, 90).to_i * 60
+    build = nil
+    loop do
+      build = Spaceship::ConnectAPI::Build.all(app_id: app.id, version: version, limit: 1).first
+      break if build && build.processed?
+      break if dry_run
+      UI.user_error!("No processed build of #{version} within the timeout") if Time.now > deadline
+      UI.message(build ? "Build #{build.version} still processing…" : "Waiting for Xcode Cloud to upload #{version}…")
+      sleep(60)
+    end
+    if dry_run
+      UI.important(build ? "Would ship build #{build.version} (#{build.processing_state})" : "No build of #{version} uploaded yet")
+      next
+    end
+    UI.user_error!("Build #{build.version} is #{build.processing_state}") unless build.processing_state == "VALID"
+
+    deliver(
+      app_identifier: bundle_id,
+      app_version: version,
+      build_number: build.version,
+      metadata_path: metadata_path,
+      skip_screenshots: !has_screenshots,
+      screenshots_path: has_screenshots ? screenshots_path : nil,
+      overwrite_screenshots: has_screenshots,
+      skip_binary_upload: true,
+      submit_for_review: submit,
+      automatic_release: false,
+      force: true,
+      run_precheck_before_submit: false,
+      submission_information: { add_id_info_uses_idfa: false }
+    )
+    UI.success(submit ? "#{version} (build #{build.version}) submitted for review" : "#{version} (build #{build.version}) staged in App Store Connect — submit when ready")
+  end
+
+  desc "Print the App Store listing's locales and current version state. Options: bundle_id:"
+  lane :locales do |options|
+    asc_api_key!
+    app = Spaceship::ConnectAPI::App.find(options.fetch(:bundle_id)) || UI.user_error!("No app record")
+    version = app.get_latest_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS)
+    UI.user_error!("No App Store version yet") unless version
+    locales = version.get_app_store_version_localizations.map(&:locale).sort
+    UI.success("latest version #{version.version_string} (#{version.app_store_state})")
+    UI.success("locales: #{locales.join(',')}")
+  end
 end

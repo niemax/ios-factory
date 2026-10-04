@@ -1,0 +1,65 @@
+name: App Store release (reusable)
+
+# Called by a consuming app repo when a staged release lands on production:
+#
+#   on:
+#     push:
+#       branches: [production]
+#       paths: [fastlane/release.json]   # only when /release-ios staged a release
+#   jobs:
+#     release:
+#       uses: niemax/ios-factory/.github/workflows/release.yml@main
+#       secrets:
+#         ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+#         ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+#         ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+#
+# Waits for Xcode Cloud's production build of the staged version to process,
+# then deliver uploads release notes (+ screenshots if staged), attaches the
+# build and submits for review if release.json says so. Linux only — no
+# macOS minutes. Pass secrets explicitly: `secrets: inherit` is unreliable
+# across repositories.
+
+on:
+  workflow_call:
+    secrets:
+      ASC_KEY_ID:
+        required: true
+      ASC_ISSUER_ID:
+        required: true
+      ASC_KEY_CONTENT:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Ship staged release
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Check out app repo
+        uses: actions/checkout@v4
+
+      - name: Check out ios-factory (lanes live here)
+        uses: actions/checkout@v4
+        with:
+          repository: niemax/ios-factory
+          path: ios-factory-tools
+
+      - name: Set up Ruby + fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: ios-factory-tools
+
+      - name: Wait for build, upload, submit
+        working-directory: ios-factory-tools
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+          FASTLANE_SKIP_UPDATE_CHECK: "1"
+        run: bundle exec fastlane ios release app_dir:"$GITHUB_WORKSPACE"

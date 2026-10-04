@@ -80,7 +80,12 @@ ln -s ~/Desktop/Code/ios-factory/skills/setup-ios-cicd ~/.claude/skills/setup-io
 `fastlane/Fastfile` holds App Store Connect tooling. **Builds stay on Xcode Cloud.** Fastlane never archives or uploads here. Install with `brew install fastlane`, run from this repo's root.
 
 - `fastlane ios setup bundle_id:… name:… [group:…] [testers:a@b.com,…] [dry_run:true]`: idempotent app setup. It creates the bundle ID and app record via `produce` (Apple ID login with 2FA, only when the app doesn't exist yet), then makes an internal TestFlight group with access to all builds (reusing an existing one), then adds testers. API key via `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_PATH`.
-- Release lanes for `production` (`deliver` / `pilot`: notes, metadata, screenshots, submit) come with #4/#5.
+- `fastlane ios release app_dir:… [dry_run:true]`: ships a staged release. It waits for Xcode Cloud's build of the version in `fastlane/release.json`, then `deliver` uploads release notes (+ screenshots if staged), attaches the build and submits if asked. Runs in CI via `.github/workflows/release.yml` (Linux) on a merge to `production` that touches `release.json`.
+- `fastlane ios locales bundle_id:…`: the listing's languages and the live version's state.
+
+## `release-ios` skill
+
+`skills/release-ios/` is an interactive release guide: version bump → What's New → translations into every listing language → screenshots → submit-for-review (default yes). It commits the staged release on `main` and opens the `main` → `production` PR. Merging ships it, hands-off. Install: `ln -s ~/Desktop/Code/ios-factory/skills/release-ios ~/.claude/skills/release-ios`.
 
 ## Setting secrets on a consuming app repo
 
