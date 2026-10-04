@@ -86,7 +86,7 @@ gh secret set ASC_ISSUER_ID --repo <owner>/<repo> --body "<issuer id>"
 gh secret set ASC_KEY_CONTENT --repo <owner>/<repo> < ~/path/to/AuthKey_XXXXXX.p8
 ```
 
-## What stays manual (Apple offers no API)
+## What stays manual (no API for it)
 
 - **Sign in with Apple** in Firebase Auth: one toggle in the Firebase console (the MCP can't enable it). `new-ios-app` gives you the link.
 - **Creating the app record** for a brand-new app. `produce` handles it, but it needs your Apple ID login with 2FA.
