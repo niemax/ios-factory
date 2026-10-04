@@ -4,8 +4,12 @@ default_platform(:ios)
 
 def asc_api_key!
   # Local runs pass a file path; CI passes the raw .p8 contents from a secret.
-  key = ENV["ASC_KEY_PATH"] ? { key_filepath: File.expand_path(ENV["ASC_KEY_PATH"]) } : { key_content: ENV.fetch("ASC_KEY_CONTENT") }
-  app_store_connect_api_key(key_id: ENV.fetch("ASC_KEY_ID"), issuer_id: ENV.fetch("ASC_ISSUER_ID"), **key)
+  # Locally, put them in fastlane/.env (gitignored; fastlane loads it itself).
+  missing = %w[ASC_KEY_ID ASC_ISSUER_ID].reject { |name| ENV[name] }
+  missing << "ASC_KEY_PATH (or ASC_KEY_CONTENT)" unless ENV["ASC_KEY_PATH"] || ENV["ASC_KEY_CONTENT"]
+  UI.user_error!("Missing #{missing.join(', ')}. Locally: copy fastlane/.env.example to fastlane/.env and fill it in.") unless missing.empty?
+  key = ENV["ASC_KEY_PATH"] ? { key_filepath: File.expand_path(ENV["ASC_KEY_PATH"]) } : { key_content: ENV["ASC_KEY_CONTENT"] }
+  app_store_connect_api_key(key_id: ENV["ASC_KEY_ID"], issuer_id: ENV["ASC_ISSUER_ID"], **key)
 end
 
 # App Store Connect tooling for any app — builds are Xcode Cloud's job, never

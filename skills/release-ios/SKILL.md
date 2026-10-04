@@ -7,7 +7,7 @@ description: Interactive App Store release guide for an iOS app on niemax/ios-fa
 
 Interactive: one step at a time. Ask, show a draft, let the user edit, move on. Run from the app repo. Ships nothing itself: it **stages** a release. Merging the PR to `production` ships it via ios-factory's `release.yml` (it waits for Xcode Cloud's build, uploads, and submits).
 
-`<ios-factory>` is this skill's folder `../..`. Lanes need `fastlane` (`brew install fastlane`) and the App Store Connect key: Key ID, Issuer ID and the **path** to the `.p8` (never open or print it), passed as `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_PATH`.
+`<ios-factory>` is this skill's folder `../..`. Lanes need `fastlane` (`brew install fastlane`) and the App Store Connect key: Key ID, Issuer ID and the **path** to the `.p8` (never open or print it), passed as `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_PATH`, or kept in `<ios-factory>/fastlane/.env` (gitignored, auto-loaded; template in `.env.example`).
 
 ## 0. Preflight (silent unless something's wrong)
 

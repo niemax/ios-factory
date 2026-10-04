@@ -51,7 +51,7 @@ jobs:
 
 Uses the `setup` lane in `<ios-factory>/fastlane/Fastfile` (this skill's folder is `<ios-factory>/skills/setup-ios-cicd`). Needs `fastlane` (`brew install fastlane`). Idempotent: re-running only fills gaps.
 
-1. Ask for the App Store Connect key: Key ID, Issuer ID, and the **path** to the `.p8` file. Never open, print or copy the key file. Only pass the path in `ASC_KEY_PATH`.
+1. Ask for the App Store Connect key: Key ID, Issuer ID, and the **path** to the `.p8` file. Never open, print or copy the key file. Only pass the path in `ASC_KEY_PATH`. If `<ios-factory>/fastlane/.env` exists, the lanes pick the values up from there.
 2. Confirm the app name, the internal TestFlight group name (default `Internal Testers`) and tester emails. Testers must already be users on the team.
 3. Dry run first, from the ios-factory root, and show the output:
    ```bash
