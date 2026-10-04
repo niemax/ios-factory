@@ -49,13 +49,20 @@ jobs:
 
 ## 4. App Store Connect
 
-Uses the `setup` lane in `<ios-factory>/fastlane/Fastfile` (this skill's folder is `<ios-factory>/skills/setup-ios-cicd`). Needs `fastlane` (`brew install fastlane`). Idempotent: re-running only fills gaps.
+Uses the plugin's `setup` lane. Idempotent: re-running only fills gaps.
 
-1. Ask for the App Store Connect key: Key ID, Issuer ID, and the **path** to the `.p8` file. Never open, print or copy the key file. Only pass the path in `ASC_KEY_PATH`. If `<ios-factory>/fastlane/.env` exists, the lanes pick the values up from there.
+**Running lanes.** Every `fastlane ios <lane> …` below means:
+```bash
+(cd "${CLAUDE_PLUGIN_ROOT}" && ASC_KEY_ID="${user_config.asc_key_id}" ASC_ISSUER_ID="${user_config.asc_issuer_id}" \
+  ASC_KEY_PATH="${user_config.asc_key_path}" FASTLANE_SKIP_DOCS=1 SKIP_SLOW_FASTLANE_WARNING=1 fastlane ios <lane> …)
+```
+If any of those values is empty, or `fastlane` is missing, stop and have the user run `/ios-factory:setup` first. Never open, print or copy the `.p8` key file.
+
+1. The App Store Connect key comes from the plugin settings (see Running lanes). Nothing to ask for here.
 2. Confirm the app name, the internal TestFlight group name (default `Internal Testers`) and tester emails. Testers must already be users on the team.
-3. Dry run first, from the ios-factory root, and show the output:
+3. Dry run first and show the output:
    ```bash
-   ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=… fastlane ios setup \
+   fastlane ios setup \
      bundle_id:<id> name:"<App>" group:"Internal Testers" testers:a@b.com,c@d.com dry_run:true
    ```
 4. After the user agrees, run it without `dry_run`.

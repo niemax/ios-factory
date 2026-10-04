@@ -1,0 +1,12 @@
+{
+  "name": "niemax",
+  "description": "niemax's Claude Code plugins",
+  "owner": { "name": "niemax" },
+  "plugins": [
+    {
+      "name": "ios-factory",
+      "source": "./",
+      "description": "Onboard iOS apps onto shared PR checks and App Store Connect, and ship App Store releases interactively."
+    }
+  ]
+}

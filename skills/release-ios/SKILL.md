@@ -7,14 +7,19 @@ description: Interactive App Store release guide for an iOS app on niemax/ios-fa
 
 Interactive: one step at a time. Ask, show a draft, let the user edit, move on. Run from the app repo. Ships nothing itself: it **stages** a release. Merging the PR to `production` ships it via ios-factory's `release.yml` (it waits for Xcode Cloud's build, uploads, and submits).
 
-`<ios-factory>` is this skill's folder `../..`. Lanes need `fastlane` (`brew install fastlane`) and the App Store Connect key: Key ID, Issuer ID and the **path** to the `.p8` (never open or print it), passed as `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_PATH`, or kept in `<ios-factory>/fastlane/.env` (gitignored, auto-loaded; template in `.env.example`).
+**Running lanes.** Every `fastlane ios <lane> …` below means:
+```bash
+(cd "${CLAUDE_PLUGIN_ROOT}" && ASC_KEY_ID="${user_config.asc_key_id}" ASC_ISSUER_ID="${user_config.asc_issuer_id}" \
+  ASC_KEY_PATH="${user_config.asc_key_path}" FASTLANE_SKIP_DOCS=1 SKIP_SLOW_FASTLANE_WARNING=1 fastlane ios <lane> …)
+```
+If any of those values is empty, or `fastlane` is missing, stop and have the user run `/ios-factory:setup` first. Never open, print or copy the `.p8` key file.
 
 ## 0. Preflight (silent unless something's wrong)
 
 - `git fetch`. `main` must be clean and up to date, since the release commit goes on `main`. If not, stop and say why.
 - Bundle ID and current `MARKETING_VERSION` from `project.yml` (or the `.xcodeproj`).
 - `git log origin/production..origin/main --no-merges --format='%H%n%s%n%b%n--'` gives exactly what this release ships. If it's empty, there's nothing to release; stop.
-- `fastlane ios locales bundle_id:<id>` (from `<ios-factory>`) gives the listing's languages and the live version's state. If a version is still `WAITING_FOR_REVIEW` or `IN_REVIEW`, warn that submitting a new one will need that one handled first.
+- `fastlane ios locales bundle_id:<id>` gives the listing's languages and the live version's state. If a version is still `WAITING_FOR_REVIEW` or `IN_REVIEW`, warn that submitting a new one will need that one handled first.
 - One-time wiring: if `.github/workflows/release.yml` is missing in the app repo, it gets added in step 6 (caller below). Check `gh secret list` for `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_CONTENT`. If any is missing, give the user the `gh secret set` commands (`ASC_KEY_CONTENT` via `< path/to/key.p8`) to run themselves.
 
 ## 1. Version
@@ -63,4 +68,4 @@ Show the full diff first, and commit only after the user agrees.
 ## 7. Done: tell the user
 
 - Merging the PR → Xcode Cloud builds → `release.yml` waits for processing (up to 90 min), uploads, and submits (if chosen). Watch it under the app repo's Actions tab.
-- Optional dry run first: `fastlane ios release app_dir:<app repo> dry_run:true` from `<ios-factory>` checks the staged files and whether the build exists.
+- Optional dry run first: `fastlane ios release app_dir:<absolute app repo path> dry_run:true` checks the staged files and whether the build exists.

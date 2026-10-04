@@ -25,16 +25,13 @@ Consumers: [Roompiece](https://github.com/roompiece/roompiece), [Card Scanner](h
 
 | Skill | What it does | Use when | Status |
 |---|---|---|---|
+| [`setup`](skills/setup/SKILL.md) | First-run machine setup: installs fastlane, exports Apple's Xcode agent skills, verifies the App Store Connect key from the plugin settings. | Right after installing the plugin, or on a new computer | ✅ |
 | [`setup-ios-cicd`](skills/setup-ios-cicd/SKILL.md) | Explores the app repo, then writes a project-tailored `AGENTS.md` (from a generic template; domain knowledge stays in the app repo) and `pr-checks.yml`. Sets up App Store Connect: bundle ID, app record, internal TestFlight group, testers. Guides the two Xcode Cloud workflows. | Onboarding a new or existing iOS app, or refreshing its `AGENTS.md` | ✅ Verified on two existing apps; new-app path not yet run |
 | [`release-ios`](skills/release-ios/SKILL.md) | Interactive release guide, one step at a time: version bump from commits → What's New → translations into every App Store language → screenshots → submit for review (default yes). Commits the staged release and opens the `main` → `production` PR. | Shipping an update to the App Store | 🟡 Built; first real release pending |
 | `new-ios-app` | Scaffolds a new app: project, folder structure, navigation, PostHog, backend (Firebase/Supabase), then calls `setup-ios-cicd`. | Starting a new app | ⏳ Planned |
 | `setup-subscriptions` | Creates App Store subscriptions and prices, and wires them to RevenueCat (via its MCP). | Adding or changing paid plans | ⏳ Planned |
 
-Install a skill once (symlink, so `git pull` updates it):
-
-```bash
-ln -s ~/Desktop/Code/ios-factory/skills/<skill> ~/.claude/skills/<skill>
-```
+Skills install as one Claude Code plugin; see [Getting started](#getting-started). Invoke them as `/ios-factory:<skill>`.
 
 ## Shared workflows
 
@@ -57,13 +54,24 @@ For App Store Connect work only. **Fastlane never builds:** that's Xcode Cloud's
 | `fastlane ios setup bundle_id:… name:… [group:…] [testers:…] [dry_run:true]` | Idempotent app setup: bundle ID + app record via `produce` (Apple ID + 2FA, only for a new app), an internal TestFlight group with access to all builds (an existing one is reused), testers. |
 | `fastlane ios release app_dir:… [dry_run:true]` | Ships what `release-ios` staged (CI runs this via `release.yml`). |
 | `fastlane ios locales bundle_id:…` | The App Store listing's languages and the latest version's review state. |
+| `fastlane ios apps` | The team's apps (name, bundle ID). Also checks that the API key works. |
 
 ## Getting started
 
-1. `brew install fastlane`
-2. `cp fastlane/.env.example fastlane/.env` and fill in the App Store Connect Key ID, Issuer ID and the **path** to the `.p8` key. The file is gitignored, and the key itself never goes in it. Keys live in App Store Connect → Users and Access → Integrations → Team Keys (App Manager role is enough).
-3. Symlink the skills (above). Then run `/setup-ios-cicd` from an app repo.
-4. Export Apple's Xcode agent skills, which the generated `AGENTS.md` and `swift-lint` build on: `xcrun agent skills export --output-dir ~/.claude/skills`
+ios-factory is a Claude Code plugin. On any machine:
+
+1. In Claude Code, add the marketplace and install the plugin:
+   ```
+   /plugin marketplace add niemax/ios-factory
+   /plugin install ios-factory@niemax
+   ```
+   Enabling it asks for your App Store Connect **Key ID**, **Issuer ID** and the **path** to the `.p8` key file. Only the path is stored, never the key. Keys live in App Store Connect → Users and Access → Integrations → Team Keys (App Manager role is enough). Change them later under `/plugin` → ios-factory → Configure.
+2. Run `/ios-factory:setup`. It installs fastlane if missing, exports Apple's Xcode agent skills, and checks the key works by listing your apps.
+3. Done. Run `/ios-factory:setup-ios-cicd` in an app repo, and `/ios-factory:release-ios` to ship.
+
+Updates arrive with `/plugin update ios-factory` (the plugin follows `main`).
+
+Running lanes by hand, outside Claude: clone the repo, `brew install fastlane`, copy `fastlane/.env.example` to `fastlane/.env` and fill it in, then run `fastlane ios <lane>` from the repo root.
 
 For hands-off releases, each app repo needs the key as GitHub secrets. Run these yourself; never paste key material into an agent session:
 

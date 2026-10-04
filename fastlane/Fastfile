@@ -169,4 +169,12 @@ platform :ios do
     UI.success("latest version #{version.version_string} (#{version.app_store_state})")
     UI.success("locales: #{locales.join(',')}")
   end
+
+  desc "List the team's apps (name, bundle ID). Doubles as an API key check."
+  lane :apps do
+    asc_api_key!
+    apps = Spaceship::ConnectAPI::App.all
+    apps.each { |app| UI.message("#{app.name} — #{app.bundle_id}") }
+    UI.success("API key works: #{apps.count} app(s)")
+  end
 end

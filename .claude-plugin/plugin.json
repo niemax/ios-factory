@@ -1,0 +1,26 @@
+{
+  "name": "ios-factory",
+  "displayName": "iOS Factory",
+  "description": "Onboard iOS apps onto shared PR checks and App Store Connect, and ship App Store releases interactively. Builds run on Xcode Cloud.",
+  "author": { "name": "niemax" },
+  "repository": "https://github.com/niemax/ios-factory",
+  "license": "MIT",
+  "keywords": ["ios", "app-store-connect", "testflight", "xcode-cloud", "fastlane", "release"],
+  "userConfig": {
+    "asc_key_id": {
+      "type": "string",
+      "title": "App Store Connect Key ID",
+      "description": "App Store Connect → Users and Access → Integrations → Team Keys (App Manager role or higher)."
+    },
+    "asc_issuer_id": {
+      "type": "string",
+      "title": "App Store Connect Issuer ID",
+      "description": "Shown above the Team Keys table."
+    },
+    "asc_key_path": {
+      "type": "file",
+      "title": "App Store Connect key file (.p8)",
+      "description": "Path to the downloaded AuthKey .p8. Only the path is stored; the key itself is never read into Claude's context. Suggested home: ~/.appstoreconnect/private_keys/"
+    }
+  }
+}
