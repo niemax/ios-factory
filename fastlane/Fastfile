@@ -2,6 +2,18 @@ require "json"
 
 default_platform(:ios)
 
+# Xcode Cloud workflows that distribute to "TestFlight (Internal Testing Only)" upload builds App
+# Store Connect refuses to attach to a version ("The specified pre-release build could not be
+# added"). The same version often has both kinds, so skip internal-only ones. Spaceship's Build
+# model doesn't map buildAudienceType, hence the raw request.
+def newest_app_store_build(app, version)
+  response = Spaceship::ConnectAPI.tunes_request_client.get("v1/builds", {
+    "filter[app]" => app.id, "filter[preReleaseVersion.version]" => version, sort: "-uploadedDate", limit: 20
+  })
+  eligible = response.body["data"].find { |build| build.dig("attributes", "buildAudienceType") != "INTERNAL_ONLY" }
+  eligible && Spaceship::ConnectAPI::Build.get(build_id: eligible["id"])
+end
+
 def asc_api_key!
   # Local runs pass a file path; CI passes the raw .p8 contents from a secret.
   # Locally, put them in fastlane/.env (gitignored; fastlane loads it itself).
@@ -124,15 +136,15 @@ platform :ios do
     asc_api_key!
     app = Spaceship::ConnectAPI::App.find(bundle_id) || UI.user_error!("No app record for #{bundle_id}")
 
-    # Wait for the newest build of this version to finish processing.
+    # Wait for the newest App Store-eligible build of this version to finish processing.
     deadline = Time.now + options.fetch(:timeout_minutes, 90).to_i * 60
     build = nil
     loop do
-      build = Spaceship::ConnectAPI::Build.all(app_id: app.id, version: version, limit: 1).first
+      build = newest_app_store_build(app, version)
       break if build && build.processed?
       break if dry_run
       UI.user_error!("No processed build of #{version} within the timeout") if Time.now > deadline
-      UI.message(build ? "Build #{build.version} still processing…" : "Waiting for Xcode Cloud to upload #{version}…")
+      UI.message(build ? "Build #{build.version} still processing…" : "Waiting for Xcode Cloud to upload an App Store build of #{version}…")
       sleep(60)
     end
     if dry_run
