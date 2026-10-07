@@ -1,6 +1,6 @@
 ---
 name: setup
-description: First-run setup for the ios-factory plugin on this machine. Installs fastlane and xcodegen if missing, checks the Firebase and PostHog MCPs, exports Apple's Xcode agent skills, checks the App Store Connect key settings and verifies they work. Use right after installing the plugin, on a new computer, or when an ios-factory skill says setup is incomplete.
+description: First-run setup for the ios-factory plugin on this machine. Installs fastlane and xcodegen if missing, checks the Firebase, PostHog and RevenueCat MCPs, exports Apple's Xcode agent skills, checks the App Store Connect key settings and verifies they work. Use right after installing the plugin, on a new computer, or when an ios-factory skill says setup is incomplete.
 ---
 
 # ios-factory setup
@@ -45,10 +45,11 @@ If any is empty, propose a value, then have the user save it under `/plugin` →
 
 Lists the team's apps. A 401 means the Key ID, Issuer ID and key file don't belong together.
 
-## 5. Firebase and PostHog MCPs (used by `new-ios-app`)
+## 5. Firebase, PostHog and RevenueCat MCPs (used by `new-ios-app` and `setup-subscriptions`)
 
 - `mcp__plugin_firebase_firebase__*` tools missing: the user runs `/plugin marketplace add firebase/firebase-tools`, then `/plugin install firebase@firebase`.
 - `mcp__plugin_posthog_posthog__exec` missing: the user runs `/plugin install posthog@claude-plugins-official`.
+- RevenueCat tools (`list-projects`…) missing: the user runs `/plugin marketplace add RevenueCat/ai-toolkit`, then `/plugin install revenuecat@RevenueCat` (not `revenuecat-play-billing`, which is Android only). OAuth on first use.
 - Then `/reload-plugins`, or restart Claude Code if the tools still don't show. Firebase login: `firebase_get_environment`, then `firebase_login` if no user. PostHog asks for OAuth on first use.
 
 ## 6. Done: tell the user what's next
