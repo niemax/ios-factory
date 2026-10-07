@@ -104,5 +104,5 @@ gh secret set ASC_KEY_CONTENT --repo <owner>/<repo> < ~/path/to/AuthKey_XXXXXX.p
 ## Status and history
 
 - Decision trail: spec [roompiece#94](https://github.com/roompiece/roompiece/issues/94), map [roompiece#87](https://github.com/roompiece/roompiece/issues/87), and the move to Xcode Cloud in [#15](https://github.com/niemax/ios-factory/issues/15).
-- Open work: map [#5](https://github.com/niemax/ios-factory/issues/5); screenshots #8, #10, #11, #12.
+- Open work: map [#5](https://github.com/niemax/ios-factory/issues/5); first-submission prep #17; ASO via Astro #18; skill orchestration #19; screenshots #8, #10, #11, #12.
 - Self-tests: `scripts/test-check-commits.sh`, `scripts/test-check-swift.sh`; for the template, scaffold into a temp dir and build and test it. Refresh `swift-lint`'s rules from Apple's `soft-deprecated-apis.md` after each Xcode release.
