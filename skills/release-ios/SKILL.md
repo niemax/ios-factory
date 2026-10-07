@@ -19,7 +19,12 @@ If any of those values is empty, or `fastlane` is missing, stop and have the use
 - `git fetch`. `main` must be clean and up to date, since the release commit goes on `main`. If not, stop and say why.
 - Bundle ID and current `MARKETING_VERSION` from `project.yml` (or the `.xcodeproj`).
 - `git log origin/production..origin/main --no-merges --format='%H%n%s%n%b%n--'` gives exactly what this release ships. If it's empty, there's nothing to release; stop.
-- `fastlane ios locales bundle_id:<id>` gives the listing's languages and the live version's state. If a version is still `WAITING_FOR_REVIEW` or `IN_REVIEW`, warn that submitting a new one will need that one handled first.
+- `fastlane ios locales bundle_id:<id>` gives the listing's languages and the latest version's state.
+- **Pick the mode.** Compare that latest App Store version with `git show origin/production:fastlane/release.json`:
+  - Same version, and it's **not live** (`PREPARE_FOR_SUBMISSION`, `DEVELOPER_REJECTED`, `REJECTED`, `METADATA_REJECTED`, `INVALID_BINARY`): **resubmit mode**. The release was staged and shipped once, then pulled or rejected. Go to [Resubmit](#resubmit) instead of steps 1–5.
+  - Same version, still `WAITING_FOR_REVIEW` or `IN_REVIEW`: stop. The user removes it from review in App Store Connect first (App Store tab → the version → Remove from Review), then re-runs this.
+  - Otherwise (the latest version is live, or this is the first release): a **new release**, steps 1–7.
+- An open `main` → `production` PR (`gh pr list --base production --head main`) means a release is staged but not merged. Offer to update it (re-run only the steps the user wants to change) instead of staging a second one.
 - One-time wiring: if `.github/workflows/release.yml` is missing in the app repo, it gets added in step 6 (caller below). Check `gh secret list` for `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_CONTENT`. If any is missing, give the user the `gh secret set` commands (`ASC_KEY_CONTENT` via `< path/to/key.p8`) to run themselves.
 
 ## 1. Version
@@ -46,7 +51,7 @@ Ask: **keep the current ones** (default) or **replace**. To replace, the user po
 
 Show the full diff first, and commit only after the user agrees.
 1. Bump `MARKETING_VERSION` in `project.yml`. If it's XcodeGen, run `xcodegen generate` and include the `.xcodeproj` change.
-2. `fastlane/release.json`: `{"bundle_id": "<id>", "version": "<x.y.z>", "submit_for_review": true|false}`.
+2. `fastlane/release.json`: `{"bundle_id": "<id>", "version": "<x.y.z>", "submit_for_review": true|false, "attempt": 1}`.
 3. `fastlane/metadata/<locale>/release_notes.txt` for every locale (overwrite the previous release's).
 4. If missing, `.github/workflows/release.yml`:
    ```yaml
@@ -64,6 +69,18 @@ Show the full diff first, and commit only after the user agrees.
          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
    ```
 5. Commit on `main` as `chore(release): <x.y.z>`, push, then `gh pr create --base production --head main` titled `Release <x.y.z>` with the en-US notes and the shipped commit list in the body.
+
+## Resubmit
+
+Same version, new build. Keep everything already approved; redo only what changed.
+1. **What changed:** show `origin/production..origin/main` (the fixes since the pulled attempt), grouped by type.
+2. **Version:** unchanged. Never bump it: App Store Connect already holds this version.
+3. **What's New:** show the current `fastlane/metadata/en-US/release_notes.txt`. Default: **keep it**. If the new commits add something user-facing, the user can edit it; then retranslate only if en-US changed (step 3 rules).
+4. **Screenshots:** keep, unless the user names ones to replace.
+5. **Submit for review?** Default yes, as in step 5.
+6. **Stage:** increment `attempt` in `fastlane/release.json` (a missing `attempt` counts as 1; it's what triggers `release.yml` on `production`, since nothing else in that file changed), plus any edited notes. Show the diff, commit on `main` as `chore(release): resubmit <x.y.z>`, push, and open the PR titled `Release <x.y.z> (resubmit)` with the new commits in the body.
+
+The release lane only ships a build uploaded after the merge commit, so the pulled attempt's build can't be picked up by mistake. It waits for Xcode Cloud's new one.
 
 ## 7. Done: tell the user
 

@@ -1,4 +1,5 @@
 require "json"
+require "time"
 
 default_platform(:ios)
 
@@ -6,11 +7,16 @@ default_platform(:ios)
 # Store Connect refuses to attach to a version ("The specified pre-release build could not be
 # added"). The same version often has both kinds, so skip internal-only ones. Spaceship's Build
 # model doesn't map buildAudienceType, hence the raw request.
-def newest_app_store_build(app, version)
+# Only builds uploaded after `after` count: on a resubmit the previous attempt's
+# build is already processed, and must not be shipped instead of the new one.
+def newest_app_store_build(app, version, after:)
   response = Spaceship::ConnectAPI.tunes_request_client.get("v1/builds", {
     "filter[app]" => app.id, "filter[preReleaseVersion.version]" => version, sort: "-uploadedDate", limit: 20
   })
-  eligible = response.body["data"].find { |build| build.dig("attributes", "buildAudienceType") != "INTERNAL_ONLY" }
+  eligible = response.body["data"].find do |build|
+    build.dig("attributes", "buildAudienceType") != "INTERNAL_ONLY" &&
+      Time.parse(build.dig("attributes", "uploadedDate")) > after
+  end
   eligible && Spaceship::ConnectAPI::Build.get(build_id: eligible["id"])
 end
 
@@ -117,7 +123,8 @@ platform :ios do
     deliver creates/updates the App Store version, uploads notes (and
     screenshots if staged), attaches the build and submits if asked.
 
-    Options: app_dir: (app repo root), [timeout_minutes: 90], [dry_run:true]
+    Options: app_dir: (app repo root), [built_after: ISO time, default: app_dir HEAD's commit time],
+             [timeout_minutes: 90], [dry_run:true]
   DESC
   lane :release do |options|
     app_dir = File.expand_path(options.fetch(:app_dir))
@@ -136,11 +143,16 @@ platform :ios do
     asc_api_key!
     app = Spaceship::ConnectAPI::App.find(bundle_id) || UI.user_error!("No app record for #{bundle_id}")
 
-    # Wait for the newest App Store-eligible build of this version to finish processing.
+    # The merge to production triggers both this run and Xcode Cloud's build, so
+    # the build to ship is uploaded after that commit.
+    after = options[:built_after] ? Time.parse(options[:built_after]) : Time.parse(sh("git", "-C", app_dir, "log", "-1", "--format=%cI", log: false).strip)
+    UI.message("Shipping the newest App Store build of #{version} uploaded after #{after.utc.iso8601}")
+
+    # Wait for that build to finish processing.
     deadline = Time.now + options.fetch(:timeout_minutes, 90).to_i * 60
     build = nil
     loop do
-      build = newest_app_store_build(app, version)
+      build = newest_app_store_build(app, version, after: after)
       break if build && build.processed?
       break if dry_run
       UI.user_error!("No processed build of #{version} within the timeout") if Time.now > deadline
@@ -148,7 +160,7 @@ platform :ios do
       sleep(60)
     end
     if dry_run
-      UI.important(build ? "Would ship build #{build.version} (#{build.processing_state})" : "No build of #{version} uploaded yet")
+      UI.important(build ? "Would ship build #{build.version} (#{build.processing_state})" : "No App Store build of #{version} uploaded after #{after.utc.iso8601} yet")
       next
     end
     UI.user_error!("Build #{build.version} is #{build.processing_state}") unless build.processing_state == "VALID"
