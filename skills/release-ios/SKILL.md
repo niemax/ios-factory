@@ -51,7 +51,7 @@ Ask: **keep the current ones** (default) or **replace**. To replace, the user po
 
 Show the full diff first, and commit only after the user agrees.
 1. Bump `MARKETING_VERSION` in `project.yml`. If it's XcodeGen, run `xcodegen generate` and include the `.xcodeproj` change.
-2. `fastlane/release.json`: `{"bundle_id": "<id>", "version": "<x.y.z>", "submit_for_review": true|false, "attempt": 1}`.
+2. `fastlane/release.json`: `{"bundle_id": "<id>", "version": "<x.y.z>", "submit_for_review": true|false, "attempt": 1}`. Add `"reset_ratings": true` to reset the summary star rating with this version (only when the user asks; it can't be undone).
 3. `fastlane/metadata/<locale>/release_notes.txt` for every locale (overwrite the previous release's).
 4. If missing, `.github/workflows/release.yml`:
    ```yaml

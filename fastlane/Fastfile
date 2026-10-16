@@ -115,7 +115,7 @@ platform :ios do
     Ship a staged release to the App Store. Runs after a merge to production
     (CI, Linux), or locally. Reads what /release-ios staged in the app repo:
 
-      fastlane/release.json                       {"bundle_id","version","submit_for_review"}
+      fastlane/release.json                       {"bundle_id","version","submit_for_review",["reset_ratings"]}
       fastlane/metadata/<locale>/release_notes.txt
       fastlane/screenshots/<locale>/…             (optional)
 
@@ -175,6 +175,7 @@ platform :ios do
       overwrite_screenshots: has_screenshots,
       skip_binary_upload: true,
       submit_for_review: submit,
+      reset_ratings: release["reset_ratings"] || nil,
       automatic_release: false,
       force: true,
       run_precheck_before_submit: false,
